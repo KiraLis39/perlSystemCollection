@@ -83,15 +83,12 @@ public class PlayDateItem extends JPanel implements MouseListener {
 
     public void saveToFile() {
         try (OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream("./resources/scheduler/" + getName() + ".db"))) {
-
             osw.write(
-                    "NAME:" + getName() +
                     "::T_IN:" + getTimerIn() +
                     "::T_OUT:" + getTimerOut() +
                     "::ALARM:" + getAlarmTime() +
-                    "::COLOR:" + defBkgColor.getRGB() +
-                    "::PATH:" + playlist.getMusicDirectory());
-
+                    "::PATH:" + playlist.getMusicDirectory()
+            );
         } catch (Exception e) {
             e.printStackTrace();
         }

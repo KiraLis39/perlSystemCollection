@@ -10,6 +10,8 @@ import javax.swing.*;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -31,6 +33,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
     private static JPanel basePane, centerPlaylistsPane;
     private static JPanel playDatePane;
     private static JScrollPane playDateScroll, playListsScroll;
+    private static PlayDateItem mondayItem, tuesdayItem, wednesdayItem, thirthdayItem, fridayItem, saturndayItem, sundayItem;
 
     public BackVocalFrame() {
         loadUIM();
@@ -67,13 +70,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
                         playDatePane = new JPanel(new GridLayout(7, 1, 3,3)) {
                             {
-                                add(new PlayDateItem("Понедельник", new Playlist(null)));
-                                add(new PlayDateItem("Вторник", new Playlist(null)));
-                                add(new PlayDateItem("Среда", new Playlist(null)));
-                                add(new PlayDateItem("Четверг", new Playlist(null)));
-                                add(new PlayDateItem("Пятница", new Playlist(null)));
-                                add(new PlayDateItem("Суббота", new Playlist(null), Color.CYAN));
-                                add(new PlayDateItem("Воскресенье", new Playlist(null), Color.CYAN));
+
                             }
                         };
 
@@ -143,6 +140,8 @@ public class BackVocalFrame extends JFrame implements WindowListener {
         pack();
         setLocationRelativeTo(null);
         setVisible(true);
+
+        loadTracksDB();
 
         executor = Executors.newSingleThreadExecutor();
 //		executor.submit(() -> {
@@ -218,6 +217,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
     public void windowClosing(WindowEvent e) {
         int req = JOptionPane.showConfirmDialog(BackVocalFrame.this, "Are You sure?..", "Exit?", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null);
         if (req == 0) {
+            saveTracksDB();
             BackVocalFrame.this.dispose();
             MainClass.exit(Codes.OLL_OK);
         }
@@ -255,6 +255,31 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                 awtException.printStackTrace();
                 Out.Print(BackVocalFrame.class, Out.LEVEL.ERROR, Arrays.stream(awtException.getStackTrace()).toArray());
             }
+        }
+    }
+
+    private static void loadTracksDB() {
+        mondayItem = new PlayDateItem("Понедельник", new Playlist(null));
+        tuesdayItem = new PlayDateItem("Вторник", new Playlist(null));
+        wednesdayItem = new PlayDateItem("Среда", new Playlist(null));
+        thirthdayItem = new PlayDateItem("Четверг", new Playlist(null));
+        fridayItem = new PlayDateItem("Пятница", new Playlist(null));
+        saturndayItem = new PlayDateItem("Суббота", new Playlist(null), Color.CYAN);
+        sundayItem = new PlayDateItem("Воскресенье", new Playlist(null), Color.CYAN);
+
+        playDatePane.add(mondayItem);
+        playDatePane.add(tuesdayItem);
+        playDatePane.add(wednesdayItem);
+        playDatePane.add(thirthdayItem);
+        playDatePane.add(fridayItem);
+        playDatePane.add(saturndayItem);
+        playDatePane.add(sundayItem);
+    }
+
+    private static void saveTracksDB() {
+        ArrayList<PlayDateItem> wdItems = BackVocalFrame.getWeakdayItems();
+        for (PlayDateItem wdItem : wdItems) {
+            wdItem.saveToFile();
         }
     }
 
