@@ -1,21 +1,20 @@
 package gui;
 
 import core.PlayDateItem;
+import core.Playlist;
 import door.MainClass;
 import fox.out.Out;
+import registry.Codes;
 import registry.Registry;
 import javax.swing.*;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
-import java.io.File;
+import java.awt.event.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
@@ -28,11 +27,10 @@ public class BackVocalFrame extends JFrame implements WindowListener {
     private Boolean isTrayed;
     private ExecutorService executor;
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss");
-    private ActionListener weakdayAL;
-    private JTabbedPane centerPlaylistsPane;
 
-    private JPanel playDatePane;
-    private static JScrollPane playDateScroll;
+    private static JPanel basePane, centerPlaylistsPane;
+    private static JPanel playDatePane;
+    private static JScrollPane playDateScroll, playListsScroll;
 
     public BackVocalFrame() {
         loadUIM();
@@ -45,40 +43,18 @@ public class BackVocalFrame extends JFrame implements WindowListener {
         setTitle("Back vocal studio v." + Registry.version);
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setMinimumSize(new Dimension(900, 450));
-//        setResizable(false);
 
-        weakdayAL = new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-//                Component[] pdItems = playDatePane.getComponents();
-//                for (Component pdItem : pdItems) {
-//                    if (pdItem instanceof PlayDateItem && ((PlayDateItem) pdItem).getWeakdayName().equals(e.getActionCommand())) {
-//                        int req = JOptionPane.showConfirmDialog(BackVocalFrame.this, "Replace exists day?..", "Replace?", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null);
-//                        if (req == 0) {
-//                            playDatePane.remove(pdItem);
-//                            playDatePane.add(new PlayDateItem(e.getActionCommand()));
-//                            playDateScroll.revalidate();
-//                        }
-//                        return;
-//                    }
-//                }
-//
-//                playDatePane.add(new PlayDateItem(e.getActionCommand()));
-//                playDateScroll.revalidate();
-            }
-        };
-
-        JPanel basePane = new JPanel(new BorderLayout(3,3)) {
+        basePane = new JPanel(new BorderLayout(3,3)) {
             {
                 setBackground(Color.darkGray);
 
-                centerPlaylistsPane = new JTabbedPane(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT) {
+                centerPlaylistsPane = new JPanel(new BorderLayout(3,3)) {
                     {
                         setBackground(Color.gray);
                     }
                 };
 
-                JScrollPane playListsScroll = new JScrollPane(centerPlaylistsPane) {
+                playListsScroll = new JScrollPane(centerPlaylistsPane) {
                     {
                         setBorder(null);
                     }
@@ -91,13 +67,13 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
                         playDatePane = new JPanel(new GridLayout(7, 1, 3,3)) {
                             {
-                                add(new PlayDateItem("Понедельник"));
-                                add(new PlayDateItem("Вторник"));
-                                add(new PlayDateItem("Среда"));
-                                add(new PlayDateItem("Четверг"));
-                                add(new PlayDateItem("Пятница"));
-                                add(new PlayDateItem("Суббота", Color.CYAN));
-                                add(new PlayDateItem("Воскресенье", Color.CYAN));
+                                add(new PlayDateItem("Понедельник", new Playlist(null)));
+                                add(new PlayDateItem("Вторник", new Playlist(null)));
+                                add(new PlayDateItem("Среда", new Playlist(null)));
+                                add(new PlayDateItem("Четверг", new Playlist(null)));
+                                add(new PlayDateItem("Пятница", new Playlist(null)));
+                                add(new PlayDateItem("Суббота", new Playlist(null), Color.CYAN));
+                                add(new PlayDateItem("Воскресенье", new Playlist(null), Color.CYAN));
                             }
                         };
 
@@ -115,36 +91,23 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
                 JPanel downBtnsPane = new JPanel(new FlowLayout(0, 3, 3)) {
                     {
-                        JButton createPlayListBtn = new JButton("Create playlist") {
-                            {
-                                setFocusPainted(false);
-                                addActionListener(new ActionListener() {
-                                    @Override
-                                    public void actionPerformed(ActionEvent e) {
-                                        String newPLName = JOptionPane.showInputDialog(BackVocalFrame.this, "Enter the playlists name:", "New playlist:", JOptionPane.OK_CANCEL_OPTION);
-
-                                        if (!newPLName.isBlank()) {
-                                            DefaultListModel<String> dlm = new DefaultListModel<>();
-                                            JList<String> newList = new JList<>(dlm);
-                                            newList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-
-
-                                            centerPlaylistsPane.add(newList, newPLName);
-                                        }
-                                    }
-                                });
-                            }
-                        };
-
-                        JButton clearListBtn = new JButton("Clear selected list");
-
                         JButton bindListBtn = new JButton("Bind to dir") {
                             {
                                 setFocusPainted(false);
                                 addActionListener(new ActionListener() {
                                     @Override
                                     public void actionPerformed(ActionEvent e) {
+                                        Component[] comps = playDatePane.getComponents();
+                                        PlayDateItem selectedItemList = null;
+                                        for (Component comp : comps) {
+                                            if (comp instanceof PlayDateItem) {
+                                                if (((PlayDateItem) comp).isSelected()) {
+                                                    selectedItemList = ((PlayDateItem) comp);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        
                                         JFileChooser fch = new JFileChooser("./resources/");
                                         fch.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                                         fch.setMultiSelectionEnabled(false);
@@ -154,17 +117,14 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                                         // Если директория выбрана, покажем ее в сообщении
                                         if (result == JFileChooser.APPROVE_OPTION ) {
                                             Path plDir = Paths.get(fch.getSelectedFile().toURI());
-                                            File[] musicArray = plDir.toFile().listFiles();
 
-
+                                            selectedItemList.getPlayList().setMusicDir(plDir);
                                         }
                                     }
                                 });
                             }
                         };
 
-                        add(createPlayListBtn);
-//                        add(createPlayListBtn);
                         add(bindListBtn);
                     }
                 };
@@ -199,6 +159,37 @@ public class BackVocalFrame extends JFrame implements WindowListener {
         return playDateScroll.getWidth();
     }
 
+    public static void resetRightPaneSelect() {
+        Component[] comps = playDatePane.getComponents();
+        for (Component comp : comps) {
+            if (comp instanceof PlayDateItem) {
+                ((PlayDateItem) comp).setSelected(false);
+            }
+        }
+
+    }
+
+    public static void showPlayList(Playlist playlist) {
+        centerPlaylistsPane.removeAll();
+        centerPlaylistsPane.add(playlist);
+
+        System.out.println("Added playlist named " + playlist.getName());
+        playListsScroll.repaint();
+        playListsScroll.revalidate();
+    }
+
+    public static ArrayList<PlayDateItem> getWeakdayItems() {
+        ArrayList<PlayDateItem> result = new ArrayList<>();
+
+        for (Component comp : playDatePane.getComponents()) {
+            if (comp instanceof PlayDateItem) {
+                result.add((PlayDateItem) comp);
+            }
+        }
+
+        return result;
+    }
+
     private void loadUIM() {
         Out.Print("Set the UIManagers view.");
 
@@ -228,7 +219,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
         int req = JOptionPane.showConfirmDialog(BackVocalFrame.this, "Are You sure?..", "Exit?", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null);
         if (req == 0) {
             BackVocalFrame.this.dispose();
-            MainClass.exit(0);
+            MainClass.exit(Codes.OLL_OK);
         }
     }
 
@@ -251,7 +242,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
             popup.add(defaultItem);
 
             MenuItem close = new MenuItem("Close");
-            close.addActionListener(e12 -> MainClass.exit(0));
+            close.addActionListener(e12 -> MainClass.exit(Codes.OLL_OK));
             popup.add(close);
 
             trayIcon = new TrayIcon(image, "Tray Demo", popup);

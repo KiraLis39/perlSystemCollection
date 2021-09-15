@@ -1,14 +1,19 @@
 package door;
 
+import core.PlayDateItem;
 import fox.iom.IOM;
 import fox.iom.IOMs;
 import fox.out.Out;
 import gui.BackVocalFrame;
-
+import registry.Codes;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 
 public class MainClass {
 
@@ -57,9 +62,29 @@ public class MainClass {
 
     }
 
-    public static void exit(int code) {
+    public static void exit(Codes code) {
         IOM.saveAll();
+
+        try {
+            saveTracksDB();
+        } catch (IOException e) {
+            e.printStackTrace();
+            code = Codes.BAD_DB_SAVING;
+        }
+
         Out.Print("Finish with code: " + code);
-        System.exit(code);
+        System.exit(code.code());
+    }
+
+    private static void saveTracksDB() throws IOException {
+        if (Files.notExists(Paths.get("./resources/tracks.db"))) {
+            Files.createFile(Paths.get("./resources/tracks.db"));
+        }
+
+        ArrayList<PlayDateItem> wdItems = BackVocalFrame.getWeakdayItems();
+        for (PlayDateItem wdItem : wdItems) {
+            wdItem.saveToFile();
+        }
+
     }
 }
