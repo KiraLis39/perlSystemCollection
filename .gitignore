@@ -1,0 +1,4 @@
+/.gradle/
+/build/
+*.mp3
+*.log

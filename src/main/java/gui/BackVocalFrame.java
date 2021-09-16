@@ -10,11 +10,14 @@ import javax.swing.*;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.IOException;
+import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,17 +26,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class BackVocalFrame extends JFrame implements WindowListener {
-
     private TrayIcon trayIcon;
     private SystemTray tray;
-    private Boolean isTrayed;
     private ExecutorService executor;
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss");
 
     private static JPanel basePane, centerPlaylistsPane;
     private static JPanel playDatePane;
     private static JScrollPane playDateScroll, playListsScroll;
-    private static PlayDateItem mondayItem, tuesdayItem, wednesdayItem, thirthdayItem, fridayItem, saturndayItem, sundayItem;
+
+    private static PlayDateItem[] dayItems = new PlayDateItem[7];
+    private static String[] days = new String[] {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+
 
     public BackVocalFrame() {
         loadUIM();
@@ -45,7 +49,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
         setTitle("Back vocal studio v." + Registry.version);
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        setMinimumSize(new Dimension(900, 450));
+        setMinimumSize(new Dimension(800, 900));
 
         basePane = new JPanel(new BorderLayout(3,3)) {
             {
@@ -60,6 +64,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                 playListsScroll = new JScrollPane(centerPlaylistsPane) {
                     {
                         setBorder(null);
+                        getVerticalScrollBar().setUnitIncrement(16);
                     }
                 };
 
@@ -79,6 +84,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                                 setBorder(null);
                                 getViewport().setPreferredSize(new Dimension(350, 0));
                                 setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+                                getVerticalScrollBar().setUnitIncrement(8);
                             }
                         };
 
@@ -105,7 +111,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                                             }
                                         }
                                         
-                                        JFileChooser fch = new JFileChooser("./resources/");
+                                        JFileChooser fch = new JFileChooser("./resources/audio/");
                                         fch.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                                         fch.setMultiSelectionEnabled(false);
                                         fch.setDialogTitle("Choose play-folder:");
@@ -115,7 +121,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                                         if (result == JFileChooser.APPROVE_OPTION ) {
                                             Path plDir = Paths.get(fch.getSelectedFile().toURI());
 
-                                            selectedItemList.getPlayList().setMusicDir(plDir);
+                                            selectedItemList.setPlayList(plDir);
                                         }
                                     }
                                 });
@@ -150,12 +156,6 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 //		executor.shutdown(); //shutdown executor
 //		executor.awaitTermination(5, TimeUnit.SECONDS); //ожидая завершения запущенных задач в течение 5 секунд
 //		executor.shutdownNow(); //cancel non-finished tasks
-
-//        stateChanged();
-    }
-
-    public static int getRightPaneWidth() {
-        return playDateScroll.getWidth();
     }
 
     public static void resetRightPaneSelect() {
@@ -196,7 +196,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
         } catch (Exception e) {
             try {UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception e2) {
-                e2.printStackTrace();
+//                e2.printStackTrace();
                 Out.Print(BackVocalFrame.class, Out.LEVEL.ERROR, Arrays.stream(e2.getStackTrace()).toArray());
             }
         }
@@ -259,21 +259,47 @@ public class BackVocalFrame extends JFrame implements WindowListener {
     }
 
     private static void loadTracksDB() {
-        mondayItem = new PlayDateItem("Понедельник", new Playlist(null));
-        tuesdayItem = new PlayDateItem("Вторник", new Playlist(null));
-        wednesdayItem = new PlayDateItem("Среда", new Playlist(null));
-        thirthdayItem = new PlayDateItem("Четверг", new Playlist(null));
-        fridayItem = new PlayDateItem("Пятница", new Playlist(null));
-        saturndayItem = new PlayDateItem("Суббота", new Playlist(null), Color.CYAN);
-        sundayItem = new PlayDateItem("Воскресенье", new Playlist(null), Color.CYAN);
+        String dayString;
+        int counter = 0;
+        for (String day : days) {
+            Out.Print("Try to load the day '" + day + "'...");
 
-        playDatePane.add(mondayItem);
-        playDatePane.add(tuesdayItem);
-        playDatePane.add(wednesdayItem);
-        playDatePane.add(thirthdayItem);
-        playDatePane.add(fridayItem);
-        playDatePane.add(saturndayItem);
-        playDatePane.add(sundayItem);
+            try {
+                dayString = Files.readString(Paths.get("./resources/scheduler/" + day + ".db"), StandardCharsets.UTF_8);
+                String[] data = dayString.split("NN_");
+
+                System.out.println("Date in: " + data[1]);
+                System.out.println(Instant.parse(data[1].split("_EE")[1]));
+
+                dayItems[counter] = new PlayDateItem(
+                        day,
+                        Paths.get(data[4].split("_EE")[1]),
+                        Instant.parse(data[1].split("_EE")[1]),
+                        Instant.parse(data[2].split("_EE")[1]),
+                        Instant.parse(data[3].split("_EE")[1]),
+                        Boolean.parseBoolean(data[5].split("_EE")[1]));
+            } catch (IllegalArgumentException iae) {
+                iae.printStackTrace();
+            } catch (ArrayIndexOutOfBoundsException aibe) {
+                aibe.printStackTrace();
+            } catch (MalformedInputException mie) {
+                mie.printStackTrace();
+            } catch (NoSuchFileException fnf) {
+                Out.Print("PlayList for " + day + " is not exist.", Out.LEVEL.WARN);
+                dayItems[counter] =
+                        new PlayDateItem(
+                                day,
+                                Paths.get("null"),
+                                Instant.now(), Instant.now(), Instant.now(),
+                                true);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            String curName = dayItems[counter].getName();
+            playDatePane.add(dayItems[counter]);
+            counter++;
+        }
     }
 
     private static void saveTracksDB() {
@@ -287,7 +313,6 @@ public class BackVocalFrame extends JFrame implements WindowListener {
         Out.Print("Traying the frame...");
         tray.add(trayIcon);
         trayIcon.displayMessage("BVS", "Плеер работает в фоновом режиме", TrayIcon.MessageType.INFO);
-        isTrayed = true;
     }
 
     private void detray() {
@@ -295,7 +320,6 @@ public class BackVocalFrame extends JFrame implements WindowListener {
         BackVocalFrame.this.setVisible(true);
         BackVocalFrame.this.setState(JFrame.NORMAL);
         tray.remove(trayIcon);
-        isTrayed = false;
     }
 
     @Override

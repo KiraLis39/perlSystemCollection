@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-
+    implementation files('lib/JLayer1.0.1.39.jar')
 }
 
 test {

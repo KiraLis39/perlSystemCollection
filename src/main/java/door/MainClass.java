@@ -46,7 +46,8 @@ public class MainClass {
         impotrantDirs = new Path[] {
                 Paths.get("./resources/audio/music"),
                 Paths.get("./resources/audio/sound"),
-                Paths.get("./resources/audio/meta")
+                Paths.get("./resources/audio/meta"),
+                Paths.get("./resources/scheduler/")
         };
 
         for (Path impotrantDir : impotrantDirs) {

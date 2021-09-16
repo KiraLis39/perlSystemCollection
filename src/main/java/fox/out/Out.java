@@ -165,6 +165,9 @@ public class Out {
 	// базовая печать сообщений в консоль (до вывода в файл лога):
 	public synchronized static void Print(String message) {Print(Out.class, LEVEL.INFO, message, Thread.currentThread());}	
 	public synchronized static void Print(Class<?> clazz, Exception e) {Print(clazz, LEVEL.ERROR, e.getStackTrace());}
+	public static void Print(String message, LEVEL level) {
+		Print("", level, message);
+	}
 	public synchronized static void Print(Class<?> clazz, LEVEL level, Exception e) {Print(clazz, level, e.getStackTrace());}	
 	public synchronized static void Print(Class<?> clazz, LEVEL level, Object[] messages) {Print(clazz.getName(), level, messages);}	
 	public synchronized static void Print(Class<?> clazz, LEVEL level, String message) {Print(clazz, level, message, Thread.currentThread());}
