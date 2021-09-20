@@ -1,12 +1,9 @@
-package core;
+package fox.components;
 
-import fox.components.ListItem;
-import fox.components.MyCellRenderer;
 import fox.fb.FoxFontBuilder;
 import fox.out.Out;
 import gui.BackVocalFrame;
 import javazoom.jl.decoder.JavaLayerException;
-import javazoom.jl.player.AudioDevice;
 import javazoom.jl.player.FactoryRegistry;
 import javazoom.jl.player.advanced.AdvancedPlayer;
 import javazoom.jl.player.advanced.PlaybackEvent;
@@ -28,14 +25,15 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.stream.Collectors;
 
-public class PlayDateItem extends JPanel implements MouseListener {
+public class PlayDataItem extends JPanel implements MouseListener {
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd");
 
     private AdvancedPlayer musicPlayer;
-    private Path plDirectory;
     private Playlist playlist;
 
     private JPanel dayControlPane;
@@ -43,8 +41,8 @@ public class PlayDateItem extends JPanel implements MouseListener {
     private JCheckBox repeatCBox;
     private JButton startPlayBtn, nextPlayBtn, stopPlayBtn;
 
-    private Font btnFont = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.HARLOW_S_I, 12, true);
-    private Font titleFont = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.HARLOW_S_I, 12, true);
+    private Font btnFont = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.ARIAL_NARROW, 14, true);
+    private Font titleFont = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.ARIAL, 12, true);
 
     private Color defBkgColor = Color.GRAY, secondColor, defTextColor = Color.BLACK;
     private String timerIn = "00:00:00", timerOut = "23:59:59", alarmTime = "00:00:00";
@@ -79,8 +77,11 @@ public class PlayDateItem extends JPanel implements MouseListener {
         }
 
         if (isSelected) {
-            g.setColor(Color.GREEN);
-            g.drawRoundRect(1,1,getWidth() - 2,getHeight() - 2,3,3);
+            Graphics2D g2D = (Graphics2D) g;
+            g2D.setStroke(new BasicStroke(2));
+            g2D.setColor(Color.GREEN);
+            g2D.drawRoundRect(1,1,getWidth() - 2,getHeight() - 2,3,3);
+//            g2D.dispose();
         }
 
         // oval:
@@ -107,9 +108,8 @@ public class PlayDateItem extends JPanel implements MouseListener {
     }
 
 
-    public PlayDateItem(String name, Path plDirectory, String _timerIn, String _timerOut, String _alarmTime, Boolean _repeat) {
+    public PlayDataItem(String name, String _timerIn, String _timerOut, String _alarmTime, Boolean _repeat) {
         setName(name);
-        this.plDirectory = plDirectory;
         this.timerIn = _timerIn;
         this.timerOut = _timerOut;
         this.alarmTime = _alarmTime;
@@ -118,14 +118,7 @@ public class PlayDateItem extends JPanel implements MouseListener {
         if (getName().equals("Saturday") || getName().equals("Sunday")) {
             secondColor = defBkgColor = Color.CYAN;
         }
-        try {
-            playlist = new Playlist(this,
-                    Files.walk(plDirectory, 1).filter(m -> (m.toFile().getName().endsWith(".mp3"))).collect(Collectors.toList()));
-        } catch (NoSuchFileException npe) {
-            Out.Print(getName() + " player has no playlist!");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        playlist = new Playlist(this);
 
         setBackground(Color.DARK_GRAY);
         setLayout(new BorderLayout());
@@ -301,16 +294,19 @@ public class PlayDateItem extends JPanel implements MouseListener {
                                 startPlayBtn = new JButton() {
                                     BufferedImage im;
 
-                                    {
-                                        try {im = ImageIO.read(new File("./resources/icons/play.png"));
-                                        } catch (IOException e) {e.printStackTrace();}
-                                    }
-
                                     @Override
                                     public void paintComponent(Graphics g) {
-                                        if (im != null) {
-                                            g.drawImage(im, 1, 1, 30, 30, null);
-                                        } else {super.paintComponent(g);}
+//                                        if (im == null) {
+                                            try {
+                                                if (isPlaying) {
+                                                    im = ImageIO.read(new File("./resources/icons/playPressed.png"));
+                                                } else {
+                                                    im = ImageIO.read(new File("./resources/icons/play.png"));
+                                                }
+                                            } catch (IOException e) {e.printStackTrace();}
+//                                        }
+
+                                        g.drawImage(im, 1, 1, 30, 30, null);
                                     }
 
                                     {
@@ -327,7 +323,7 @@ public class PlayDateItem extends JPanel implements MouseListener {
                                                 play();
                                                 selectThisItem();
                                             } else {
-                                                JOptionPane.showConfirmDialog(PlayDateItem.this, "Its not a schedule time!", "Not yet:", JOptionPane.DEFAULT_OPTION);
+                                                JOptionPane.showConfirmDialog(PlayDataItem.this, "Its not a schedule time!", "Not yet:", JOptionPane.DEFAULT_OPTION);
                                             }
                                         });
                                     }
@@ -358,11 +354,11 @@ public class PlayDateItem extends JPanel implements MouseListener {
                                         addActionListener(e -> {
                                             if (isPlaying && inSchedulingTimeAccept()) {
                                                 stop();
-                                                playlist.selectRow(playlist.getSelectedIndex() + 1);
+                                                playlist.selectRow(playlist.getSelectedIndex() + 1 >= playlist.getRowsCount() ? 0 : playlist.getSelectedIndex() + 1);
                                                 play();
                                                 selectThisItem();
                                             } else {
-                                                JOptionPane.showConfirmDialog(PlayDateItem.this, "Not available now.", "Not yet:", JOptionPane.DEFAULT_OPTION);
+                                                JOptionPane.showConfirmDialog(PlayDataItem.this, "Not available now.", "Not yet:", JOptionPane.DEFAULT_OPTION);
                                             }
                                         });
                                     }
@@ -406,6 +402,7 @@ public class PlayDateItem extends JPanel implements MouseListener {
 
                                 repeatCBox = new JCheckBox("Repeat") {
                                     {
+                                        setFont(btnFont);
                                         setForeground(defTextColor);
                                         setSelected(repeat);
                                         addItemListener(new ItemListener() {
@@ -461,17 +458,33 @@ public class PlayDateItem extends JPanel implements MouseListener {
         };
     }
 
-    public void saveToFile() {
-        try (OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream("./resources/scheduler/" + getName() + ".db"), Charset.forName("UTF-8"))) {
-            osw.write(
-                    "NN_T_IN_EE" + timerIn +
-                        "NN_T_OUT_EE" + timerOut +
-                        "NN_ALARM_EE" + alarmTime +
-                        "NN_PATH_EE" + plDirectory +
-                        "NN_REP_EE" + repeat
-            );
+    public synchronized void saveToFile() {
+        try {
+
+            try (OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream("./resources/scheduler/" + getName() + ".meta"), Charset.forName("UTF-8"))) {
+                osw.write(
+                        "NN_T_IN_EE" + timerIn +
+                                "NN_T_OUT_EE" + timerOut +
+                                "NN_ALARM_EE" + alarmTime +
+                                "NN_REP_EE" + repeat
+                );
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            try (OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream("./resources/scheduler/" + getName() + ".list"), Charset.forName("UTF-8"))) {
+
+                for (Path track : playlist.getTracks()) {
+                    osw.write(track.toString());
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
+            Out.Print("Error with saving PlayDataItem: " + e.getMessage());
         }
     }
 
@@ -518,7 +531,7 @@ public class PlayDateItem extends JPanel implements MouseListener {
 
     // Audio control:
     int index;
-    private void play() {
+    public synchronized void play() {
         if (playlist == null) {
             JOptionPane.showConfirmDialog(this, "Playlist is empty!", "Info:", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null);
             return;
@@ -560,7 +573,7 @@ public class PlayDateItem extends JPanel implements MouseListener {
         Out.Print("Media: music: the '" + playlist.getTrack(playlist.getSelectedIndex()).toFile().getName() + "' exist into musicMap and play now...");
     }
 
-    public void stop() {
+    public synchronized void stop() {
         System.out.println("STOPPED!");
         isPlaying = false;
         startPlayBtn.setBackground(null);
@@ -581,6 +594,11 @@ public class PlayDateItem extends JPanel implements MouseListener {
 
 
     // Getters & setters:
+    public void addTrack(Path path) {
+        Out.Print("Adding the track '" + path.toFile().getName() + "' to day '" + getName() + "'...");
+        playlist.add(path);
+    }
+
     public void setSelected(boolean selected) {
         this.isSelected = selected;
         setBackground(isSelected ? Color.green.darker() : null);
@@ -588,39 +606,19 @@ public class PlayDateItem extends JPanel implements MouseListener {
     }
     public boolean isSelected() {return this.isSelected;}
 
-    public void setPlayList(Path newPlayListPath) {
-
-        if (newPlayListPath == null || Files.notExists(newPlayListPath)) {
-            Out.Print("Path '" + newPlayListPath + "' is not exist!", Out.LEVEL.WARN);
-        }
-
-        try {
-            plDirectory = newPlayListPath;
-            if (plDirectory == null) {
-                playlist = null;
-                return;
-            }
-
-            playlist = new Playlist(
-                    this,
-                    Files.walk(newPlayListPath, 1)
-                            .filter(m -> (m.toFile().getName().endsWith(".mp3")))
-                            .collect(Collectors.toList())
-            );
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     private void selectThisItem() {
         BackVocalFrame.resetDownPaneSelect();
         setSelected(true);
         BackVocalFrame.showPlayList(playlist);
-        if (playlist != null) {BackVocalFrame.setProgress(100 / playlist.getRowsCount() * index);}
+        if (playlist != null && playlist.getRowsCount() > 0) {BackVocalFrame.setProgress(100 / playlist.getRowsCount() * index);}
     }
 
     public boolean isPlayed() {
         return isPlaying;
+    }
+
+    public String getActiveTrackName() {
+        return playlist.getTrack(index).toFile().getName();
     }
 
 
@@ -662,9 +660,20 @@ public class PlayDateItem extends JPanel implements MouseListener {
         return "PDate item '" + getName() + "' (" + playlist.getRowsCount() + " tracks)";
     }
 
-    public String getActiveTrackName() {
-        return playlist.getTrack(index).toFile().getName();
+    public void moveSelectedUp() {
+        playlist.moveSelectedUp();
     }
+
+    public void removeSelected() {
+        playlist.removeSelected();
+    }
+
+    public void moveSelectedDown() {
+        playlist.moveSelectedDown();
+    }
+
+    public Playlist getPlaylist() {return playlist;}
+
 
     // subframes:
     private static class AlarmsDialog extends JDialog {

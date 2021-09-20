@@ -1,5 +1,5 @@
 #IOM_SAVE
-#Sat Sep 18 22:35:38 MSK 2021
-propFile=.\\resources\\config.prop
+#Mon Sep 20 18:06:29 MSK 2021
+propFile=./resources/config.prop
 OUTLOG_ENABLED=true
 propName=CONFIG
