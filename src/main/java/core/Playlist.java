@@ -1,16 +1,19 @@
 package core;
 
+import fox.components.ListItem;
+import fox.components.MyCellRenderer;
 import fox.out.Out;
 import gui.BackVocalFrame;
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 
 
 public class Playlist extends JPanel implements iPlayList {
     private List<Path> musicFilesList;
-    private DefaultListModel<String> dlm = new DefaultListModel<>();
+    private DefaultListModel<ListItem> dlm = new DefaultListModel<>();
     private JList<String> playList;
 
     public Playlist(PlayDateItem player, List<Path> musicFilesList) {
@@ -18,6 +21,7 @@ public class Playlist extends JPanel implements iPlayList {
 
         setName(player.getName());
         setLayout(new BorderLayout(3,3));
+        setOpaque(false);
 
         reload();
     }
@@ -35,9 +39,12 @@ public class Playlist extends JPanel implements iPlayList {
             add(file.toFile().getName());
         }
 
-        playList = new JList<>(dlm) {{
-            setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        }};
+        playList = new JList(dlm);
+        playList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+//      playList.setLayoutOrientation(JList.VERTICAL);
+        playList.setFixedCellHeight(32);
+        playList.setBackground(Color.DARK_GRAY);
+        playList.setCellRenderer(new MyCellRenderer(32));
 
         add(playList);
 
@@ -82,7 +89,7 @@ public class Playlist extends JPanel implements iPlayList {
 
     @Override
     public void add(String fileName) {
-        dlm.addElement(fileName);
+        dlm.addElement(new ListItem(new File("./resources/icons/0.png"), fileName));
     }
 
     public int getSelectedIndex() {

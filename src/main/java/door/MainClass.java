@@ -5,6 +5,9 @@ import fox.iom.IOMs;
 import fox.out.Out;
 import gui.BackVocalFrame;
 import registry.Codes;
+
+import javax.swing.*;
+import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,6 +29,8 @@ public class MainClass {
 
             Out.Print("Start!");
 
+            loadUIM();
+
             new BackVocalFrame();
 
         } catch (IOException e) {
@@ -33,6 +38,21 @@ public class MainClass {
         }
 
     }
+
+
+    private static void loadUIM() {
+        Out.Print("Set the UIManagers view.");
+
+        try {
+            UIManager.setLookAndFeel(new NimbusLookAndFeel());
+        } catch (Exception e) {
+            try {UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception e2) {
+                Out.Print("Has a some problem with a loading UI manager..", Out.LEVEL.WARN);
+            }
+        }
+    }
+
 
     private static void buildIOM() {
         IOM.setConsoleOutOn(false);
@@ -47,7 +67,8 @@ public class MainClass {
                 Paths.get("./resources/audio/music"),
                 Paths.get("./resources/audio/sound"),
                 Paths.get("./resources/audio/meta"),
-                Paths.get("./resources/scheduler/")
+                Paths.get("./resources/scheduler/"),
+                Paths.get("./resources/icons/")
         };
 
         for (Path impotrantDir : impotrantDirs) {

@@ -42,7 +42,7 @@ public class Out {
 			LogThread = new Thread(new Runnable() {
 				@Override
 				public void run() {
-					Print("INFO: Out", LEVEL.INFO, Thread.currentThread().getName() + " is started with write-level " + errLevel.name() + " (#" + errLevel.ordinal() + ")");
+					Print("Out:", LEVEL.INFO, Thread.currentThread().getName() + " is started with write-level " + errLevel.name() + " (#" + errLevel.ordinal() + ")");
 					if (!checkFiles()) {throw new RuntimeException("ERR: Out: Files creating is fail!");}
 					
 					while (enabled || !Thread.currentThread().isInterrupted()) {
@@ -57,12 +57,15 @@ public class Out {
 								} else if (messageStack.size() > 15) {LogThread.setPriority(Thread.NORM_PRIORITY);
 								} else {LogThread.setPriority(Thread.MIN_PRIORITY);}
 								
-								if (typeDeque.size() != messageStack.size()) {System.err.println("WARN: Out messageArray has size: " + messageStack.size() + ", but typeDeque`s size: " + typeDeque.size());}
+								if (typeDeque.size() != messageStack.size()) {
+									System.err.println("WARN: Out messageArray has size: " + messageStack.size() + ", but typeDeque`s size: " + typeDeque.size());
+								}
 								
 								logHTML();
 							}
 
-							try {Thread.sleep(sleepTime);} catch (InterruptedException ie) {Thread.currentThread().interrupt();
+							try {Thread.sleep(sleepTime);
+							} catch (InterruptedException ie) {Thread.currentThread().interrupt();
 							} catch (Exception e) {e.printStackTrace();}
 						}
 					}
@@ -74,7 +77,7 @@ public class Out {
 			{
 				{
 					setName("FoxLib39: OutLogThread");
-					setPriority(Thread.MIN_PRIORITY);
+//					setPriority(Thread.MIN_PRIORITY);
 					setDaemon(true);
 					start();
 				}
@@ -155,7 +158,15 @@ public class Out {
 			}
 			
 			osw.write("</p></font>\n");
-		} catch (Exception de) {System.err.println(de.getMessage());
+		} catch (Exception de) {
+			System.err.println(de.getMessage());
+			try {
+				OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream(HTMLlog, true), charset);
+				osw.write("<font color='#bf4c28'><h3>FoxLogger exception: " + de.getMessage());
+				osw.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		} finally {
 			logCount++;
 			free = true;
