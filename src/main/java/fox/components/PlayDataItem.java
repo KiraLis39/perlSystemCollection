@@ -538,28 +538,28 @@ public class PlayDataItem extends JPanel implements MouseListener {
         int outSecond = Integer.parseInt(timerOut.split(":")[2]);
 
         if (nowHour > outHour) {
-            System.err.println("Point 00");
+//            System.err.println("Point 00");
             accept = false;
         } else if (nowHour == outHour) {
             if (nowMinute > outMinute) {
-                System.err.println("Point FW");
+//                System.err.println("Point FW");
                 accept = false;
             } else if (nowMinute == outMinute) {
                 if (nowSecond > outSecond) {
-                    System.err.println("Point BE");
+//                    System.err.println("Point BE");
                     accept = false;
                 }
             }
         }
 
         if (nowHour < inHour) {
-            System.err.println("Point 01");
+//            System.err.println("Point 01");
             accept = false;
         } else if (nowHour == inHour && nowMinute < inMinute) {
-            System.err.println("Point 02");
+//            System.err.println("Point 02");
             accept = false;
         } else if (nowHour == inHour && nowMinute == inMinute && nowSecond < inSecond) {
-            System.err.println("Point 03");
+//            System.err.println("Point 03");
             accept = false;
         }
 
