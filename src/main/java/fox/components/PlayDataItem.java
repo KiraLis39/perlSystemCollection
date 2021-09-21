@@ -462,22 +462,19 @@ public class PlayDataItem extends JPanel implements MouseListener {
         pb = new PlaybackListener() {
             @Override
             public void playbackStarted(PlaybackEvent evt) {
+                super.playbackStarted(evt);
                 BackVocalFrame.setProgress(100 / playpane.getRowsCount() * index);
             }
 
             @Override
             public void playbackFinished(PlaybackEvent evt) {
+                super.playbackFinished(evt);
                 pausedOnFrame = evt.getFrame();
                 System.out.println("stopped by playbackFinished");
 
-                if (repeat && !isPaused) {
-                    index++;
-                    if (index >= playpane.getRowsCount()) {
-                        index = 0;
-                    }
-                    isPlaying = false;
-                    playpane.selectRow(index);
-                    play();
+                if (repeat && !isPaused && !isHandStopped) {
+                    System.err.println("skipped by playbackFinished");
+                    playNext();
                 } else {BackVocalFrame.setProgress(100);}
 
             }
@@ -587,56 +584,52 @@ public class PlayDataItem extends JPanel implements MouseListener {
         }
     }
 
+
     // Audio control:
     int index;
     public synchronized void play() {
+        if (isPlaying) {
+            stop();
+            return;
+        }
+
         if (playpane == null) {
             JOptionPane.showConfirmDialog(this, "Playlist is empty!", "Info:", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null);
             return;
         }
-        if (isPlaying) {
-            stop();
-        }
 
         index = playpane.getSelectedIndex();
-        runTheThread(0);
+        runTheThread();
 
         Out.Print("Media: music: the '" + playpane.getTrack(playpane.getSelectedIndex()).toFile().getName() + "' exist into musicMap and play now...");
     }
 
-    private void runTheThread(int from) {
+    private synchronized void runTheThread() {
+        if (musicPlayer != null) {
+            musicPlayer.close();
+        }
+
         musicThread = new Thread(() -> {
-            URI uri;
-            BufferedInputStream mp3 = null;
-            InputStream s = null;
+            isPlaying = true;
 
             try {
-                isPlaying = true;
+                URI uri = playpane.getTrack(index).toFile().toURI();
 
-                System.out.println("INDEX: " + index);
-                uri = playpane.getTrack(index).toFile().toURI();
-                s = uri.toURL().openStream();
-                mp3 = new BufferedInputStream(s);
+                try (
+                        InputStream s = uri.toURL().openStream();
+                        BufferedInputStream mp3 = new BufferedInputStream(s)) {
 
-                musicPlayer = new AdvancedPlayer(mp3, FactoryRegistry.systemRegistry().createAudioDevice());
-                musicPlayer.setPlayBackListener(pb);
+                    musicPlayer = new AdvancedPlayer(mp3);
+                    musicPlayer.setPlayBackListener(pb);
 
-                startPlayBtn.setBackground(Color.GREEN);
-                BackVocalFrame.updatePlayedLabelText();
-//                playpane.selectRow(index);
+                    BackVocalFrame.updatePlayedLabelText();
 
-//                System.out.println("FROM: " + from + "; TO: " + (mp3.available()));
-                musicPlayer.play(from, mp3.available());
-            } catch (IOException | JavaLayerException e) {
-                e.printStackTrace();
-                isPlaying = false;
-            } finally {
-                if (mp3 != null) {
-                    try {mp3.close();
-                    } catch (IOException e) {e.printStackTrace();}
-                    try {s.close();
-                    } catch (IOException e) {e.printStackTrace();}
+                    musicPlayer.play();
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
                 stop();
             }
         });
@@ -644,45 +637,47 @@ public class PlayDataItem extends JPanel implements MouseListener {
     }
 
     public synchronized void playNext() {
-        stop();
+        System.out.println("PLAY_NEXT!");
+
         index++;
         if (index >= playpane.getRowsCount()) {
             index = 0;
         }
-        runTheThread(0);
+//      playpane.selectRow(index);
+        runTheThread();
     }
 
-    public void pause() {
+    public synchronized void pause() {
+        System.out.println("PAUSED!");
+
         try {
-            System.out.println("PAUSED!");
-            musicPlayer.stop();
             isPaused = true;
-        } catch (Exception f) {
-            /* IGNORE */
-        }
+            musicPlayer.stop();
+        } catch (Exception f) {/* IGNORE */}
     }
 
-    public void resume() {
+    public synchronized void resume() {
+        System.out.println("RESUMED!");
+
         if (isPaused) {
             isPaused = false;
-            runTheThread(pausedOnFrame);
+            play();
         }
     }
 
     public synchronized void stop() {
         System.out.println("STOPPED!");
+
+        try {musicPlayer.close();
+        } catch (Exception e) {/* IGNORE BY NOW */}
+
+        try {musicThread.interrupt();
+        } catch (Exception e) {/* IGNORE BY NOW */}
+
+        try {alarmThread.interrupt();
+        } catch (Exception e) {/* IGNORE BY NOW */}
+
         isPlaying = false;
-//        startPlayBtn.setBackground(null);
-
-        try {
-            try {
-                musicPlayer.close();
-            } catch (Exception e) {/* IGNORE BY NOW */}
-
-            try {
-                musicThread.interrupt();
-            } catch (Exception e) {/* IGNORE BY NOW */}
-        } catch (Exception e) {e.printStackTrace();}
 
         BackVocalFrame.setProgress(0);
         BackVocalFrame.updatePlayedLabelText();
@@ -690,30 +685,17 @@ public class PlayDataItem extends JPanel implements MouseListener {
         playpane.repaint();
     }
 
-
     public synchronized void playAlarm(Path alarmFilePath) {
         alarmThread = new Thread(() -> {
-            URI uri;
-            BufferedInputStream mp3 = null;
-            InputStream s = null;
-
             try {
-                uri = alarmFilePath.toFile().toURI();
-                s = uri.toURL().openStream();
-                mp3 = new BufferedInputStream(s);
-
-                new AdvancedPlayer(mp3, FactoryRegistry.systemRegistry().createAudioDevice()).play();
+                URI uri = alarmFilePath.toFile().toURI();
+                try (
+                        InputStream s = uri.toURL().openStream();
+                        BufferedInputStream mp3 = new BufferedInputStream(s)) {
+                    new AdvancedPlayer(mp3).play();
+                }
             } catch (IOException | JavaLayerException e) {
                 e.printStackTrace();
-            } finally {
-                if (mp3 != null) {
-                    try {mp3.close();
-                    } catch (IOException e) {e.printStackTrace();}
-                    try {s.close();
-                    } catch (IOException e) {e.printStackTrace();}
-                    try {Thread.currentThread().interrupt();
-                    } catch (Exception e) {e.printStackTrace();}
-                }
             }
         });
         alarmThread.start();
@@ -833,7 +815,7 @@ public class PlayDataItem extends JPanel implements MouseListener {
             String nowTime = new Date().toString().split(" ")[3];
             int now = Integer.parseInt(nowTime.replaceAll(":", ""));
             int need = Integer.parseInt(time.replaceAll(":", ""));
-            System.out.println("NOW: " + nowTime + "; alarm check time: " + time + "; pass: " + (now - need));
+//            System.out.println("NOW: " + nowTime + "; alarm check time: " + time + "; pass: " + (now - need));
 
             if (now > need && now - need < 100) {
                 return true;

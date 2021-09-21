@@ -287,23 +287,8 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
         repaint();
 
-//        InputAction.add("f", this);
-//        InputAction.set("f", "pause", KeyEvent.VK_1, 0, new AbstractAction() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                getSelectedItem().pause();
-//            }
-//        });
-//        InputAction.set("f", "resume", KeyEvent.VK_2, 0, new AbstractAction() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                getSelectedItem().resume();
-//            }
-//        });
-
         try {
             Out.Print("Starting the Executor...");
-//            executor = Executors.newSingleThreadExecutor();
             executor = Executors.newFixedThreadPool(2);
             executor.execute(() -> {
                 while (true) {
@@ -336,8 +321,6 @@ public class BackVocalFrame extends JFrame implements WindowListener {
             });
             executor.execute(() -> {
                 while (true) {
-                    System.out.println("Check the alarms...");
-
                     try {
 
                         for (PlayDataItem weakdayItem : getWeakdayItems()) {
