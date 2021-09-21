@@ -20,21 +20,25 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 public class PlayDataItem extends JPanel implements MouseListener {
-    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd");
+    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+    private SimpleDateFormat weakday = new SimpleDateFormat("EEEE", Locale.US);
 
     private AdvancedPlayer musicPlayer;
-    private Playlist playlist;
+    private PlayPane playpane;
 
     private JPanel dayControlPane;
     private JLabel dayNameLabel, inLabelH, inLabelM, inLabelS , outLabelH, outLabelM, outLabelS;
@@ -52,12 +56,14 @@ public class PlayDataItem extends JPanel implements MouseListener {
     private int pausedOnFrame;
     private PlaybackListener pb;
 
+//    private static String[] dayz = new String[] {"пон", "вт", "ср", "чтв", "птн", "сб", "вcк"};
+
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
 
         // backbround:
-        if (playlist == null || playlist.isEmpty()) {
+        if (playpane == null || playpane.isEmpty()) {
             g.setColor(defBkgColor);
             g.fillRect(0, 0, getWidth(), getHeight());
         } else {
@@ -85,7 +91,7 @@ public class PlayDataItem extends JPanel implements MouseListener {
         }
 
         // oval:
-        if (playlist == null || playlist.isEmpty()) {
+        if (playpane == null || playpane.isEmpty()) {
             g.setColor(Color.GRAY);
             g.fillOval(getWidth() - 19, 3, 16, 16);
         } else {
@@ -118,7 +124,7 @@ public class PlayDataItem extends JPanel implements MouseListener {
         if (getName().equals("Saturday") || getName().equals("Sunday")) {
             secondColor = defBkgColor = Color.CYAN;
         }
-        playlist = new Playlist(this);
+        playpane = new PlayPane(this);
 
         setBackground(Color.DARK_GRAY);
         setLayout(new BorderLayout());
@@ -321,7 +327,7 @@ public class PlayDataItem extends JPanel implements MouseListener {
                                         addActionListener(e -> {
                                             if (inSchedulingTimeAccept()) {
                                                 play();
-                                                selectThisItem();
+                                                setSelected(true);
                                             } else {
                                                 JOptionPane.showConfirmDialog(PlayDataItem.this, "Its not a schedule time!", "Not yet:", JOptionPane.DEFAULT_OPTION);
                                             }
@@ -354,9 +360,9 @@ public class PlayDataItem extends JPanel implements MouseListener {
                                         addActionListener(e -> {
                                             if (isPlaying && inSchedulingTimeAccept()) {
                                                 stop();
-                                                playlist.selectRow(playlist.getSelectedIndex() + 1 >= playlist.getRowsCount() ? 0 : playlist.getSelectedIndex() + 1);
+                                                playpane.selectRow(playpane.getSelectedIndex() + 1 >= playpane.getRowsCount() ? 0 : playpane.getSelectedIndex() + 1);
                                                 play();
-                                                selectThisItem();
+                                                setSelected(true);
                                             } else {
                                                 JOptionPane.showConfirmDialog(PlayDataItem.this, "Not available now.", "Not yet:", JOptionPane.DEFAULT_OPTION);
                                             }
@@ -439,7 +445,7 @@ public class PlayDataItem extends JPanel implements MouseListener {
             public void playbackStarted(PlaybackEvent evt) {
                 super.playbackStarted(evt);
 
-                BackVocalFrame.setProgress(100 / playlist.getRowsCount() * index);
+                BackVocalFrame.setProgress(100 / playpane.getRowsCount() * index);
             }
 
             @Override
@@ -447,11 +453,11 @@ public class PlayDataItem extends JPanel implements MouseListener {
                 super.playbackFinished(evt);
                 if (repeat) {
                     index++;
-                    if (index >= playlist.getRowsCount()) {
+                    if (index >= playpane.getRowsCount()) {
                         index = 0;
                     }
                     isPlaying = false;
-                    playlist.selectRow(index);
+                    playpane.selectRow(index);
                     play();
                 } else {BackVocalFrame.setProgress(100);}
             }
@@ -461,7 +467,8 @@ public class PlayDataItem extends JPanel implements MouseListener {
     public synchronized void saveToFile() {
         try {
 
-            try (OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream("./resources/scheduler/" + getName() + ".meta"), Charset.forName("UTF-8"))) {
+            try (OutputStreamWriter osw = new OutputStreamWriter(
+                    new FileOutputStream("./resources/scheduler/" + getName() + ".meta"), StandardCharsets.UTF_8)) {
                 osw.write(
                         "NN_T_IN_EE" + timerIn +
                                 "NN_T_OUT_EE" + timerOut +
@@ -472,10 +479,11 @@ public class PlayDataItem extends JPanel implements MouseListener {
                 e.printStackTrace();
             }
 
-            try (OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream("./resources/scheduler/" + getName() + ".list"), Charset.forName("UTF-8"))) {
+            try (OutputStreamWriter osw = new OutputStreamWriter(
+                    new FileOutputStream("./resources/scheduler/" + getName() + ".list"), StandardCharsets.UTF_8)) {
 
-                for (Path track : playlist.getTracks()) {
-                    osw.write(track.toString());
+                for (Path track : playpane.getTracks()) {
+                    osw.write(track.toString() + "\r\n");
                 }
 
             } catch (Exception e) {
@@ -529,10 +537,28 @@ public class PlayDataItem extends JPanel implements MouseListener {
         return true;
     }
 
+    public void checkScheduleLaunch() {
+        // если сегодня день и время активности - нужно сразу запуститься.
+        Date todayIs = new Date();
+
+        boolean todayIsCurrentItemList = false;
+        System.out.println("WD: '" + weakday.format(todayIs) + "', '" + getName() + "'.");
+        if (weakday.format(todayIs).equalsIgnoreCase(getName())) {
+            todayIsCurrentItemList = true;
+        }
+
+        boolean currentDaysPlaylistIsNotEmpty = !playpane.isEmpty();
+        if (todayIsCurrentItemList && currentDaysPlaylistIsNotEmpty) {
+            BackVocalFrame.resetDownPaneSelect();
+            setSelected(true);
+            play();
+        }
+    }
+
     // Audio control:
     int index;
     public synchronized void play() {
-        if (playlist == null) {
+        if (playpane == null) {
             JOptionPane.showConfirmDialog(this, "Playlist is empty!", "Info:", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null);
             return;
         }
@@ -540,13 +566,13 @@ public class PlayDataItem extends JPanel implements MouseListener {
             return;
         }
 
-        index = playlist.getSelectedIndex();
+        index = playpane.getSelectedIndex();
         musicThread = new Thread(() -> {
             URI uri;
             BufferedInputStream mp3 = null;
 
             try {
-                uri = playlist.getTrack(index).toFile().toURI();
+                uri = playpane.getTrack(index).toFile().toURI();
                 mp3 = new BufferedInputStream(uri.toURL().openStream());
 
                 musicPlayer = new AdvancedPlayer(mp3, FactoryRegistry.systemRegistry().createAudioDevice());
@@ -554,7 +580,7 @@ public class PlayDataItem extends JPanel implements MouseListener {
 
                 isPlaying = true;
                 startPlayBtn.setBackground(Color.GREEN);
-                playlist.selectRow(index);
+                playpane.selectRow(index);
 
                 BackVocalFrame.updatePlayedLabelText();
                 musicPlayer.play();
@@ -570,7 +596,7 @@ public class PlayDataItem extends JPanel implements MouseListener {
         });
         musicThread.start();
 
-        Out.Print("Media: music: the '" + playlist.getTrack(playlist.getSelectedIndex()).toFile().getName() + "' exist into musicMap and play now...");
+        Out.Print("Media: music: the '" + playpane.getTrack(playpane.getSelectedIndex()).toFile().getName() + "' exist into musicMap and play now...");
     }
 
     public synchronized void stop() {
@@ -595,30 +621,31 @@ public class PlayDataItem extends JPanel implements MouseListener {
 
     // Getters & setters:
     public void addTrack(Path path) {
-        Out.Print("Adding the track '" + path.toFile().getName() + "' to day '" + getName() + "'...");
-        playlist.add(path);
+        playpane.add(path);
     }
 
     public void setSelected(boolean selected) {
         this.isSelected = selected;
         setBackground(isSelected ? Color.green.darker() : null);
+
+        if (selected) {
+            BackVocalFrame.showPlayList(playpane);
+
+            if (playpane != null && playpane.getRowsCount() > 0) {
+                BackVocalFrame.setProgress(100 / playpane.getRowsCount() * index);
+            }
+        }
+
         BackVocalFrame.enableControls(selected);
     }
     public boolean isSelected() {return this.isSelected;}
-
-    private void selectThisItem() {
-        BackVocalFrame.resetDownPaneSelect();
-        setSelected(true);
-        BackVocalFrame.showPlayList(playlist);
-        if (playlist != null && playlist.getRowsCount() > 0) {BackVocalFrame.setProgress(100 / playlist.getRowsCount() * index);}
-    }
 
     public boolean isPlayed() {
         return isPlaying;
     }
 
     public String getActiveTrackName() {
-        return playlist.getTrack(index).toFile().getName();
+        return playpane.getTrack(index).toFile().getName();
     }
 
 
@@ -629,7 +656,8 @@ public class PlayDataItem extends JPanel implements MouseListener {
             BackVocalFrame.resetDownPaneSelect();
             return;
         }
-        selectThisItem();
+        BackVocalFrame.resetDownPaneSelect();
+        setSelected(true);
     }
 
     @Override
@@ -657,22 +685,22 @@ public class PlayDataItem extends JPanel implements MouseListener {
 
     @Override
     public String toString() {
-        return "PDate item '" + getName() + "' (" + playlist.getRowsCount() + " tracks)";
+        return "PDate item '" + getName() + "' (" + playpane.getRowsCount() + " tracks)";
     }
 
     public void moveSelectedUp() {
-        playlist.moveSelectedUp();
+        playpane.moveSelectedUp();
     }
 
     public void removeSelected() {
-        playlist.removeSelected();
+        playpane.removeSelected();
     }
 
     public void moveSelectedDown() {
-        playlist.moveSelectedDown();
+        playpane.moveSelectedDown();
     }
 
-    public Playlist getPlaylist() {return playlist;}
+    public PlayPane getPlayPane() {return playpane;}
 
 
     // subframes:

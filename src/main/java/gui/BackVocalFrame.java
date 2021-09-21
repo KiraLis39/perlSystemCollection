@@ -1,7 +1,7 @@
 package gui;
 
 import fox.components.PlayDataItem;
-import fox.components.Playlist;
+import fox.components.PlayPane;
 import door.MainClass;
 import fox.fb.FoxFontBuilder;
 import fox.out.Out;
@@ -13,13 +13,13 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.awt.event.*;
 import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,9 +34,10 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
     private static JPanel basePane, centerPlaylistsPane, playDatePane;
     private static JScrollPane playDateScroll, playListsScroll;
-    private static JButton bindListBtn, clearBindBtn, moveUpBtn, moveDownBtn, removeBtn;
+    private static JButton bindListBtn, clearBindBtn, moveUpBtn, moveDownBtn, removeBtn, addTrackBtn;
     private static JLabel nowPlayedLabel1;
     private static JProgressBar playProgress;
+    private static JFileChooser fch = new JFileChooser("./resources/audio/");
 
     private static PlayDataItem[] dayItems = new PlayDataItem[7];
     private static String[] days = new String[] {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
@@ -115,20 +116,23 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                                         addActionListener(new ActionListener() {
                                             @Override
                                             public void actionPerformed(ActionEvent e) {
-                                                Component[] comps = playDatePane.getComponents();
+                                                int req = JOptionPane.showConfirmDialog(null,
+                                                        "Rebuild the playlist?", "Sure?", JOptionPane.WARNING_MESSAGE);
 
-                                                JFileChooser fch = new JFileChooser("./resources/audio/");
-                                                fch.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-                                                fch.setMultiSelectionEnabled(false);
-                                                fch.setDialogTitle("Choose play-folder:");
+                                                if (req == 0) {
+                                                    fch.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                                                    fch.setMultiSelectionEnabled(false);
+                                                    fch.setDialogTitle("Choose folder:");
 
-                                                int result = fch.showOpenDialog(BackVocalFrame.this);
-                                                // Если директория выбрана, покажем ее в сообщении
-                                                if (result == JFileChooser.APPROVE_OPTION ) {
-                                                    System.out.println("Chousen dir: " + fch.getSelectedFile());
-                                                    getSelectedItem().getPlaylist().setTracks(fch.getSelectedFile());
-                                                } else {
-                                                    System.out.println("Dir was not chousen...");
+                                                    int result = fch.showOpenDialog(BackVocalFrame.this);
+                                                    // Если директория выбрана, покажем ее в сообщении
+                                                    if (result == JFileChooser.APPROVE_OPTION) {
+                                                        System.out.println("Chousen dir: " + fch.getSelectedFile());
+                                                        getSelectedItem().getPlayPane().clearTracks();
+                                                        getSelectedItem().getPlayPane().setTracks(fch.getSelectedFile());
+                                                    } else {
+                                                        System.out.println("Dir was not chousen...");
+                                                    }
                                                 }
                                             }
                                         });
@@ -145,10 +149,11 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                                         addActionListener(new ActionListener() {
                                             @Override
                                             public void actionPerformed(ActionEvent e) {
-                                                int req = JOptionPane.showConfirmDialog(BackVocalFrame.this, "Clear current playlist?", "Confirm:", JOptionPane.OK_OPTION);
+                                                int req = JOptionPane.showConfirmDialog(BackVocalFrame.this,
+                                                        "Clear current playlist?", "Confirm:", JOptionPane.OK_OPTION);
                                                 if (req == 0) {
                                                     Out.Print("Clearing the playlist " + getSelectedItem().getName());
-                                                    getSelectedItem().getPlaylist().clearTracks();
+                                                    getSelectedItem().getPlayPane().clearTracks();
                                                 }
                                             }
                                         });
@@ -193,20 +198,46 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                                     }
                                 };
 
-                                moveDownBtn = new JButton("Remove track") {
+                                addTrackBtn = new JButton("Add track") {
                                     {
-                                        setForeground(Color.BLUE);
+                                        setForeground(Color.GREEN);
                                         setFont(btnsFont2);
                                         addActionListener(new ActionListener() {
                                             @Override
                                             public void actionPerformed(ActionEvent e) {
-                                                getSelectedItem().removeSelected();
+                                                fch.setFileSelectionMode(JFileChooser.FILES_ONLY);
+                                                fch.setMultiSelectionEnabled(true);
+                                                fch.setDialogTitle("Choose tracks:");
+
+                                                int result = fch.showOpenDialog(BackVocalFrame.this);
+                                                if (result == JFileChooser.APPROVE_OPTION ) {
+                                                    getSelectedItem().getPlayPane().setTracks(fch.getSelectedFiles());
+                                                } else {
+                                                    System.out.println("Dir was not chousen...");
+                                                }
                                             }
                                         });
                                     }
                                 };
 
-                                removeBtn = new JButton("Move it Down") {
+                                removeBtn = new JButton("Remove track") {
+                                    {
+                                        setForeground(Color.RED);
+                                        setFont(btnsFont2);
+                                        addActionListener(new ActionListener() {
+                                            @Override
+                                            public void actionPerformed(ActionEvent e) {
+                                                int req = JOptionPane.showConfirmDialog(null, "Delete the track?", "Sure?", JOptionPane.WARNING_MESSAGE);
+
+                                                if (req == 0) {
+                                                    getSelectedItem().removeSelected();
+                                                }
+                                            }
+                                        });
+                                    }
+                                };
+
+                                moveDownBtn = new JButton("Move it Down") {
                                     {
                                         setForeground(Color.BLUE);
                                         setFont(btnsFont2);
@@ -221,9 +252,10 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
                                 add(moveUpBtn);
                                 add(new JSeparator());
-                                add(moveDownBtn);
-                                add(new JSeparator());
+                                add(addTrackBtn);
                                 add(removeBtn);
+                                add(new JSeparator());
+                                add(moveDownBtn);
                             }
                         };
 
@@ -242,7 +274,8 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
         addWindowListener(this);
 
-        loadTracksDB();
+        loadDays();
+
         Out.Print("Show the frame...");
         pack();
         setVisible(true);
@@ -291,23 +324,20 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
     }
 
-    public static void showPlayList(Playlist playlist) {
-        if (playlist == null) {
-            centerPlaylistsPane.removeAll();
-            playListsScroll.repaint();
-            playListsScroll.revalidate();
-            return;
+    public static void showPlayList(PlayPane playpane) {
+        centerPlaylistsPane.removeAll();
+
+        if (playpane != null) {
+            centerPlaylistsPane.add(new JLabel(playpane.getName() + "`s playlist:") {{
+                setBorder(new EmptyBorder(3, 6, 0, 0));
+                setFont(headersFontSmall);
+                setForeground(Color.WHITE);
+            }}, BorderLayout.NORTH);
+            centerPlaylistsPane.add(playpane, BorderLayout.CENTER);
+
+            System.out.println("Added playlist named " + playpane.getName());
         }
 
-        centerPlaylistsPane.removeAll();
-        centerPlaylistsPane.add(new JLabel(playlist.getName() + "`s playlist:") {{
-            setBorder(new EmptyBorder(3, 6, 0, 0));
-            setFont(headersFontSmall);
-            setForeground(Color.WHITE);
-        }}, BorderLayout.NORTH);
-        centerPlaylistsPane.add(playlist, BorderLayout.CENTER);
-
-        System.out.println("Added playlist named " + playlist.getName());
         playListsScroll.repaint();
         playListsScroll.revalidate();
     }
@@ -366,6 +396,10 @@ public class BackVocalFrame extends JFrame implements WindowListener {
     public static void enableControls(boolean enable) {
         bindListBtn.setEnabled(enable);
         clearBindBtn.setEnabled(enable);
+        if (!enable) {
+            centerPlaylistsPane.removeAll();
+            centerPlaylistsPane.repaint();
+        }
     }
 
     private void stateChanged() {
@@ -375,85 +409,84 @@ public class BackVocalFrame extends JFrame implements WindowListener {
     }
 
     private static int counter = 0;
-    private static void loadTracksDB() {
+    private static void loadDays() {
         Out.Print("Loading the tracks...");
 
         for (String day : days) {
-            loadDay(day);
+            Out.Print("\nTry to load the day '" + day + "'...");
+
+            try {
+                String meta;
+                String[] data;
+
+                try {
+                    // META loading:
+                    meta = Files.readString(Paths.get("./resources/scheduler/" + day + ".meta"), StandardCharsets.UTF_8);
+                    data = meta.split("NN_");
+
+//                    Out.Print("Date in: " + Arrays.toString(data));
+                    dayItems[counter] = new PlayDataItem(
+                            day,
+                            data[1].split("_EE")[1],
+                            data[2].split("_EE")[1],
+                            data[3].split("_EE")[1],
+                            Boolean.parseBoolean(data[4].split("_EE")[1]));
+
+                    // LIST loading:
+                    List<String> tracks = Files.lines(Paths.get("./resources/scheduler/" + day + ".list"), StandardCharsets.UTF_8).collect(Collectors.toList());
+
+                    for (String track : tracks) {
+                        try {
+                            dayItems[counter].addTrack(Paths.get(track));
+                        } catch (Exception e) {
+                            if (Files.notExists(Paths.get(track))) {
+                                Out.Print("Track not exist:", Out.LEVEL.WARN, e.getStackTrace());
+                            } else {
+                                Out.Print("Unknown err:", Out.LEVEL.ERROR, e.getStackTrace());
+                            }
+                        }
+                    }
+
+                } catch (IllegalArgumentException iae) {
+                    Out.Print("Err:", Out.LEVEL.WARN, iae.getStackTrace());
+                    iae.printStackTrace();
+                } catch (ArrayIndexOutOfBoundsException aibe) {
+                    Out.Print("Err:", Out.LEVEL.WARN, aibe.getStackTrace());
+                    aibe.printStackTrace();
+                } catch (MalformedInputException mie) {
+                    Out.Print("Err:", Out.LEVEL.WARN, mie.getStackTrace());
+                    mie.printStackTrace();
+                } catch (NoSuchFileException fnf) {
+                    Out.Print("PlayList for " + day + " is not exist.", Out.LEVEL.WARN);
+                    dayItems[counter] =
+                            new PlayDataItem(
+                                    day,
+                                    "00:00:00", "23:59:59", "00:00:00",
+                                    true);
+                } catch (Exception e) {
+                    Out.Print("Meta loading err:", Out.LEVEL.WARN, e.getStackTrace());
+                    e.printStackTrace();
+                }
+
+                try {
+                    playDatePane.add(dayItems[counter]);
+                    dayItems[counter].checkScheduleLaunch();
+                } catch (Exception e) {
+                    Out.Print("Add err:", Out.LEVEL.ERROR, e.getStackTrace());
+                    e.printStackTrace();
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                Out.Print("Loading global err:", Out.LEVEL.ERROR, e.getStackTrace());
+            }
+
+//            Out.Print("Counter increase on 1 now.");
+            counter++;
         }
 
         Out.Print("Loading tracks accomplished.");
-    }
-
-    private static void loadDay(String day) {
-        Out.Print("Try to load the day '" + day + "'...");
-        try {
-            String meta;
-            String[] data;
-
-            try {
-                // META loading:
-                meta = Files.readString(Paths.get("./resources/scheduler/" + day + ".meta"), StandardCharsets.UTF_8);
-                data = meta.split("NN_");
-
-                Out.Print("Date in: " + Arrays.toString(data));
-                dayItems[counter] = new PlayDataItem(
-                        day,
-                        data[1].split("_EE")[1],
-                        data[2].split("_EE")[1],
-                        data[3].split("_EE")[1],
-                        Boolean.parseBoolean(data[4].split("_EE")[1]));
-
-                // LIST loading:
-                List<String> tracks = Files.lines(Paths.get("./resources/scheduler/" + day + ".list"), StandardCharsets.UTF_8).collect(Collectors.toList());
-
-                for (String track : tracks) {
-                    try {
-                        dayItems[counter].addTrack(Paths.get(track));
-                    } catch (Exception e) {
-                        if (Files.notExists(Paths.get(track))) {
-                            Out.Print("Track not exist:", Out.LEVEL.WARN, e.getStackTrace());
-                        } else {
-                            Out.Print("Unknown err:", Out.LEVEL.ERROR, e.getStackTrace());
-                        }
-                    }
-                }
-
-            } catch (IllegalArgumentException iae) {
-                Out.Print("Err:", Out.LEVEL.WARN, iae.getStackTrace());
-                iae.printStackTrace();
-            } catch (ArrayIndexOutOfBoundsException aibe) {
-                Out.Print("Err:", Out.LEVEL.WARN, aibe.getStackTrace());
-                aibe.printStackTrace();
-            } catch (MalformedInputException mie) {
-                Out.Print("Err:", Out.LEVEL.WARN, mie.getStackTrace());
-                mie.printStackTrace();
-            } catch (NoSuchFileException fnf) {
-                Out.Print("PlayList for " + day + " is not exist.", Out.LEVEL.WARN);
-                dayItems[counter] =
-                        new PlayDataItem(
-                                day,
-                                "00:00:00", "23:59:59", "00:00:00",
-                                true);
-            } catch (Exception e) {
-                Out.Print("Meta loading err:", Out.LEVEL.WARN, e.getStackTrace());
-                e.printStackTrace();
-            }
-
-            try {
-                playDatePane.add(dayItems[counter]);
-            } catch (Exception e) {
-                Out.Print("Add err:", Out.LEVEL.ERROR, e.getStackTrace());
-                e.printStackTrace();
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            Out.Print("Loading global err:", Out.LEVEL.ERROR, e.getStackTrace());
-        }
-
-        Out.Print("Counter increase on 1 now.");
-        counter++;
+//        dayItems[0].setSelected(true);
     }
 
     private static void saveTracksDB() {

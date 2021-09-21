@@ -5,23 +5,26 @@ import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Comparator;
 
 
 public class ListRow extends JPanel implements Comparator<ListRow> {
     private BufferedImage icon;
     private String text;
+    private Path trackPath;
     private int count;
-    private Playlist owner;
+    private PlayPane owner;
 
-    public ListRow(Playlist owner, int count, File iconFile, String text) {
+    public ListRow(PlayPane owner, int count, File iconFile, Path trackPath) {
         try {icon = ImageIO.read(iconFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+        this.trackPath = trackPath;
         this.owner = owner;
-        this.text = text;
+        this.text = trackPath.toFile().getName();
         this.count = count;
     }
 
@@ -37,5 +40,9 @@ public class ListRow extends JPanel implements Comparator<ListRow> {
     @Override
     public int compare(ListRow o1, ListRow o2) {
         return o1.count > o2.count ? 1 : -1;
+    }
+
+    public Path getPath() {
+        return trackPath;
     }
 }

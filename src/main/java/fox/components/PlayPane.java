@@ -11,36 +11,35 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class Playlist extends JPanel implements iPlayList {
+public class PlayPane extends JPanel implements iPlayList {
     private int indexGlobalCounter = 0;
 
-//    private List<Path> musicFilesList;
+    private ArrayList<Path> tracks = new ArrayList<>();
     private DefaultListModel<ListRow> dlm = new DefaultListModel();
     private JList<ListRow> playList;
-//    private PlayDataItem owner;
-    private ArrayList<Path> tracks = new ArrayList<>();
 
-    public Playlist(PlayDataItem player) {
-//        this.owner = player;
 
+    public PlayPane(PlayDataItem player) {
         setName(player.getName());
         setLayout(new BorderLayout(0,0));
         setOpaque(false);
-
-        reload();
     }
 
     private void reload() {
-        if (tracks == null || tracks.size() == 0) {return;}
-        Out.Print("Reloading playlist...");
+        if (tracks == null || tracks.size() == 0) {
+            Out.Print("tracks is empty so return...");
+            return;
+        }
+        Out.Print("Reloading playlist to " + tracks.size() + " files mp3.");
 
         removeAll();
         dlm.clear();
 
-        System.out.println("IN DIR HAS " + tracks.size() + " files mp3.");
+        indexGlobalCounter = 0;
         for (Path path : tracks) {
-            System.out.println("Adding to pl: " + path.toFile().getName());
-            add(path);
+            Out.Print("Was added to playlist the track: " + path);
+            indexGlobalCounter++;
+            dlm.addElement(new ListRow(this, indexGlobalCounter, new File("./resources/icons/0.png"), path));
         }
 
         playList = new JList(dlm) {
@@ -60,9 +59,8 @@ public class Playlist extends JPanel implements iPlayList {
 
     @Override
     public void add(Path trackPath) {
-        indexGlobalCounter++;
-        dlm.addElement(new ListRow(this, indexGlobalCounter, new File("./resources/icons/0.png"), trackPath.toString()));
         tracks.add(trackPath);
+        reload();
     }
 
     @Override
@@ -119,11 +117,19 @@ public class Playlist extends JPanel implements iPlayList {
     @Override
     public void removeSelected() {
         tracks.remove(getTrack(getSelectedIndex()));
-        dlm.getElementAt(getSelectedIndex() + 1).setCount(getSelectedIndex() + 1);
+
+        for (int i = getSelectedIndex() + 1; i < dlm.size(); i++) {
+            dlm.getElementAt(i).setCount(i);
+        }
+
         dlm.removeElementAt(getSelectedIndex());
     }
 
     public int getSelectedIndex() {
+        if (playList == null) {
+            throw new RuntimeException("playList is NULL!");
+        }
+
         int si = playList.getSelectedIndex();
         if (si == -1) {
             playList.setSelectedIndex(0);
@@ -132,7 +138,28 @@ public class Playlist extends JPanel implements iPlayList {
         return si;
     }
 
-    public Iterable<? extends Path> getTracks() {return tracks;}
+    public List<Path> getTracks() {
+        List<Path> result = new ArrayList<>();
+        for (int i = 0; i < dlm.size(); i++) {
+            result.add(dlm.get(i).getPath());
+        }
+        return result;
+    }
+
+    public void setTracks(File[] tracks) {
+        try {
+            for (File file : tracks) {
+                if (Files.isRegularFile(file.toPath())) {
+                    if (file.getName().endsWith(".mp3")) {
+                        System.out.println("Find the track: '" + file + "'...");
+                        add(file.toPath());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     public void setTracks(File tracksDirectory) {
         try {
@@ -149,5 +176,8 @@ public class Playlist extends JPanel implements iPlayList {
         }
     }
 
-    public void clearTracks() {tracks.clear();}
+    public void clearTracks() {
+        tracks.clear();
+        dlm.clear();
+    }
 }

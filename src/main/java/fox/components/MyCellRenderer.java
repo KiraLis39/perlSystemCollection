@@ -11,7 +11,7 @@ public class MyCellRenderer extends JPanel implements ListCellRenderer {
     private static int cellHeight;
     private Font trackSelectedFont = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.CONSOLAS, 14, true);
 
-    public static int getCellHeight() { return cellHeight; }
+//    public static int getCellHeight() { return cellHeight; }
 
     @Override
     public void paintComponent(Graphics g) {
