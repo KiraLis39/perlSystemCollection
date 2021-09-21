@@ -35,7 +35,7 @@ public class MyCellRenderer extends JPanel implements ListCellRenderer {
     }
 
     @Override
-    public Component getListCellRendererComponent(JList list, Object value, int index, boolean iss, boolean chf) {
+    public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
         setEnabled(list.isEnabled());
         setFont(list.getFont());
 
@@ -49,17 +49,30 @@ public class MyCellRenderer extends JPanel implements ListCellRenderer {
         }
 
         label.setIcon(new ImageIcon(ico));
-        label.setText("<html><b>(" + ((ListRow) value).getCount() + ")</b> " + ((ListRow) value).getListItemText());
+        label.setText("<html><b>(" + ((ListRow) value).getCount() + ")</b> " + ((ListRow) value).getText());
 //        label.setBorder(new EmptyBorder(0,0,0,0));
 
-        if (iss) {
-            label.setBackground(Color.WHITE);
-            label.setForeground(Color.BLACK);
+        if (isSelected) {
+            label.setBackground(Color.BLACK);
+            label.setForeground(Color.WHITE);
             label.setFont(trackSelectedFont);
+        } else if (cellHasFocus) {
+            label.setBackground(Color.MAGENTA);
+            label.setForeground(Color.YELLOW);
+            label.setFont(null);
         } else {
             label.setBackground(list.getBackground());
             label.setForeground(Color.WHITE);
             label.setFont(null);
+
+            int ind = ((CustomList)list).getPlayedRowIndex();
+            if (((ListRow) value).getCount() - 1 == ind) {
+//                setBackground(Color.GRAY);
+                label.setBackground(Color.BLACK);
+                label.setForeground(Color.CYAN);
+            } else {
+                setBackground(list.getBackground());
+            }
         }
 
         return this;

@@ -16,10 +16,11 @@ public class PlayPane extends JPanel implements iPlayList {
 
     private ArrayList<Path> tracks = new ArrayList<>();
     private DefaultListModel<ListRow> dlm = new DefaultListModel();
-    private JList<ListRow> playList;
-
+    private CustomList<ListRow> playList;
+    private PlayDataItem owner;
 
     public PlayPane(PlayDataItem player) {
+        this.owner = player;
         setName(player.getName());
         setLayout(new BorderLayout(0,0));
         setOpaque(false);
@@ -42,7 +43,7 @@ public class PlayPane extends JPanel implements iPlayList {
             dlm.addElement(new ListRow(this, indexGlobalCounter, new File("./resources/icons/0.png"), path));
         }
 
-        playList = new JList(dlm) {
+        playList = new CustomList(dlm, PlayPane.this) {
             {
                 setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
                 setFixedCellHeight(32);
@@ -66,6 +67,10 @@ public class PlayPane extends JPanel implements iPlayList {
     @Override
     public Path getTrack(int index) {
         return tracks.get(index);
+    }
+
+    public int getPlayedIndex() {
+        return owner.index;
     }
 
     @Override
@@ -126,10 +131,6 @@ public class PlayPane extends JPanel implements iPlayList {
     }
 
     public int getSelectedIndex() {
-        if (playList == null) {
-            throw new RuntimeException("playList is NULL!");
-        }
-
         int si = playList.getSelectedIndex();
         if (si == -1) {
             playList.setSelectedIndex(0);

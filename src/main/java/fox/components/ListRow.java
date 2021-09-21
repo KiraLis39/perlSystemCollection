@@ -11,10 +11,10 @@ import java.util.Comparator;
 
 public class ListRow extends JPanel implements Comparator<ListRow> {
     private BufferedImage icon;
+
     private String text;
     private Path trackPath;
     private int count;
-    private PlayPane owner;
 
     public ListRow(PlayPane owner, int count, File iconFile, Path trackPath) {
         try {icon = ImageIO.read(iconFile);
@@ -23,7 +23,7 @@ public class ListRow extends JPanel implements Comparator<ListRow> {
         }
 
         this.trackPath = trackPath;
-        this.owner = owner;
+//        this.owner = owner;
         this.text = trackPath.toFile().getName();
         this.count = count;
     }
@@ -35,7 +35,11 @@ public class ListRow extends JPanel implements Comparator<ListRow> {
         this.count = count;
     }
 
-    public String getListItemText() { return text; }
+    public String getText() { return text; }
+
+    public void setText(String text) {
+        this.text = text;
+    }
 
     @Override
     public int compare(ListRow o1, ListRow o2) {
