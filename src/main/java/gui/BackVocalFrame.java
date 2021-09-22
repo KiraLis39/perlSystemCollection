@@ -10,6 +10,7 @@ import registry.Registry;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.plaf.basic.BasicToolBarUI;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
@@ -39,6 +40,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
     private static JLabel nowPlayedLabel;
     private static JProgressBar playProgress;
     private static JFileChooser fch = new JFileChooser("./resources/audio/");
+    private static JToolBar toolBar;
 
     private static PlayDataItem[] dayItems = new PlayDataItem[7];
     private static String[] days = new String[] {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
@@ -64,7 +66,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
 
         basePane = new JPanel(new BorderLayout(3,3)) {
             {
-                setBackground(Color.DARK_GRAY);
+                setBackground(Color.BLACK);
 
                 centerPlaylistsPane = new JPanel(new BorderLayout(3,3)) {
                     {
@@ -81,116 +83,21 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
                         getViewport().setForeground(Color.WHITE);
                         setOpaque(false);
                         getVerticalScrollBar().setUnitIncrement(18);
+                        setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
                     }
                 };
 
                 downShedulePane = new JPanel(new BorderLayout(0, 0)) {
                     {
-                        setBackground(Color.gray);
-//                        setBorder(new EmptyBorder(0,1,0,1));
-//                        setPreferredSize(new Dimension(400, 0));
+                        setBackground(Color.BLACK);
 
-                        playDatePane = new JPanel(new GridLayout(1, 7, 1,0)) {
+                        toolBar = new JToolBar("Still draggable") {
                             {
-                                setBackground(Color.BLACK);
-                            }
-                        };
+                                setBorder(new EmptyBorder(0,0,1,0));
 
-                        playDateScroll = new JScrollPane(playDatePane) {
-                            {
-                                setBorder(null);
-//                                getViewport().setPreferredSize(new Dimension(BackVocalFrame.this.getWidth(), 160));
-                                setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-                                setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-                                getVerticalScrollBar().setUnitIncrement(16);
-                            }
-                        };
-
-                        downBtnsPane = new JPanel(new FlowLayout(0, 3, 3)) {
-                            {
-                                setOpaque(false);
-
-                                bindListBtn = new JButton("Bind to dir") {
-                                    {
-                                        setFont(btnsFont);
-                                        setEnabled(false);
-                                        setFocusPainted(false);
-                                        setBackground(Color.DARK_GRAY);
-                                        setForeground(Color.WHITE);
-                                        addActionListener(new ActionListener() {
-                                            @Override
-                                            public void actionPerformed(ActionEvent e) {
-                                                int req = JOptionPane.showConfirmDialog(null,
-                                                        "Rebuild the playlist?", "Sure?", JOptionPane.WARNING_MESSAGE);
-
-                                                if (req == 0) {
-                                                    fch.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-                                                    fch.setMultiSelectionEnabled(false);
-                                                    fch.setDialogTitle("Choose folder:");
-
-                                                    int result = fch.showOpenDialog(BackVocalFrame.this);
-                                                    // Если директория выбрана, покажем ее в сообщении
-                                                    if (result == JFileChooser.APPROVE_OPTION) {
-                                                        System.out.println("Chousen dir: " + fch.getSelectedFile());
-                                                        getSelectedItem().getPlayPane().clearTracks();
-                                                        getSelectedItem().getPlayPane().setTracks(fch.getSelectedFile());
-                                                    } else {
-                                                        System.out.println("Dir was not chousen...");
-                                                    }
-                                                }
-                                            }
-                                        });
-                                    }
-                                };
-
-                                clearBindBtn = new JButton("Clear bind") {
-                                    {
-                                        setFont(btnsFont);
-                                        setEnabled(false);
-                                        setFocusPainted(false);
-                                        setBackground(Color.DARK_GRAY);
-                                        setForeground(Color.WHITE);
-                                        addActionListener(new ActionListener() {
-                                            @Override
-                                            public void actionPerformed(ActionEvent e) {
-                                                int req = JOptionPane.showConfirmDialog(BackVocalFrame.this,
-                                                        "Clear current playlist?", "Confirm:", JOptionPane.OK_OPTION);
-                                                if (req == 0) {
-                                                    Out.Print("Clearing the playlist " + getSelectedItem().getName());
-                                                    getSelectedItem().getPlayPane().clearTracks();
-                                                }
-                                            }
-                                        });
-                                    }
-                                };
-
-                                playProgress = new JProgressBar(0, 0, 100) {
-                                    {
-                                        setFont(btnsFont);
-                                        setStringPainted(true);
-                                    }
-                                };
-
-                                nowPlayedLabel = new JLabel() {
-                                    {
-                                        setFont(headersFontSmall);
-                                        setForeground(Color.WHITE);
-                                    }
-                                };
-
-                                add(bindListBtn);
-                                add(clearBindBtn);
-                                add(new JSeparator(1));
-                                add(playProgress);
-                                add(new JSeparator(1));
-                                add(nowPlayedLabel);
-                            }
-                        };
-
-                        JToolBar toolBar = new JToolBar("Still draggable") {
-                            {
                                 moveUpBtn = new JButton("Move it Up") {
                                     {
+                                        setBackground(Color.RED);
                                         setForeground(Color.BLUE);
                                         setFont(btnsFont2);
                                         addActionListener(new ActionListener() {
@@ -265,9 +172,116 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
                             }
                         };
 
+                        playDatePane = new JPanel(new GridLayout(1, 7, 1,0)) {
+                            {
+                                setBackground(Color.BLACK);
+                                setBorder(null);
+                            }
+                        };
+
+                        playDateScroll = new JScrollPane(playDatePane) {
+                            {
+                                setBorder(null);
+                                setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+                                setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+                                getVerticalScrollBar().setUnitIncrement(16);
+                            }
+                        };
+
+                        JPanel downPane = new JPanel(new BorderLayout()) {
+                            {
+                                setOpaque(false);
+                                setBorder(new EmptyBorder(1,0,0,0));
+
+                                downBtnsPane = new JPanel(new FlowLayout(0, 3, 3)) {
+                                    {
+                                        setBackground(Color.DARK_GRAY);
+                                        setBorder(new EmptyBorder(0,0,3,0));
+
+                                        bindListBtn = new JButton("Bind to dir") {
+                                            {
+                                                setFont(btnsFont);
+                                                setEnabled(false);
+                                                setFocusPainted(false);
+                                                setBackground(new Color(0.3f, 0.5f, 0.2f, 1.0f));
+                                                setForeground(Color.BLACK);
+                                                addActionListener(new ActionListener() {
+                                                    @Override
+                                                    public void actionPerformed(ActionEvent e) {
+                                                        int req = JOptionPane.showConfirmDialog(null,
+                                                                "Rebuild the playlist?", "Sure?", JOptionPane.WARNING_MESSAGE);
+
+                                                        if (req == 0) {
+                                                            fch.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                                                            fch.setMultiSelectionEnabled(false);
+                                                            fch.setDialogTitle("Choose folder:");
+
+                                                            int result = fch.showOpenDialog(BackVocalFrame.this);
+                                                            // Если директория выбрана, покажем ее в сообщении
+                                                            if (result == JFileChooser.APPROVE_OPTION) {
+                                                                System.out.println("Chousen dir: " + fch.getSelectedFile());
+                                                                getSelectedItem().getPlayPane().clearTracks();
+                                                                getSelectedItem().getPlayPane().setTracks(fch.getSelectedFile());
+                                                            } else {
+                                                                System.out.println("Dir was not chousen...");
+                                                            }
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                        };
+
+                                        clearBindBtn = new JButton("Clear bind") {
+                                            {
+                                                setFont(btnsFont);
+                                                setEnabled(false);
+                                                setFocusPainted(false);
+                                                setBackground(new Color(0.5f, 0.2f, 0.2f, 1.0f));
+                                                setForeground(Color.BLACK);
+                                                addActionListener(new ActionListener() {
+                                                    @Override
+                                                    public void actionPerformed(ActionEvent e) {
+                                                        int req = JOptionPane.showConfirmDialog(BackVocalFrame.this,
+                                                                "Clear current playlist?", "Confirm:", JOptionPane.OK_OPTION);
+                                                        if (req == 0) {
+                                                            Out.Print("Clearing the playlist " + getSelectedItem().getName());
+                                                            getSelectedItem().getPlayPane().clearTracks();
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                        };
+
+                                        playProgress = new JProgressBar(0, 0, 100) {
+                                            {
+                                                setFont(btnsFont);
+                                                setStringPainted(true);
+                                            }
+                                        };
+
+                                        nowPlayedLabel = new JLabel() {
+                                            {
+                                                setFont(headersFontSmall);
+                                                setForeground(Color.WHITE);
+                                            }
+                                        };
+
+                                        add(bindListBtn);
+                                        add(clearBindBtn);
+                                        add(new JSeparator(1));
+                                        add(playProgress);
+                                        add(new JSeparator(1));
+                                        add(nowPlayedLabel);
+                                    }
+                                };
+
+                                add(downBtnsPane);
+                            }
+                        };
+
                         add(toolBar, BorderLayout.NORTH);
                         add(playDateScroll, BorderLayout.CENTER);
-                        add(downBtnsPane, BorderLayout.SOUTH);
+                        add(downPane, BorderLayout.SOUTH);
                     }
                 };
 
@@ -284,6 +298,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
         Out.Print("Show the frame...");
         pack();
         setVisible(true);
+        setLocationRelativeTo(null);
 
         loadDays();
 
@@ -427,8 +442,13 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
     }
 
     public static void setPlayedLabelText(String mes) {
-        nowPlayedLabel.setText(mes);
-        centerPlaylistsPane.repaint();
+        new Thread(() -> {
+            try {Thread.sleep(250);
+            } catch (InterruptedException e) {/* IGNORE */}
+
+            nowPlayedLabel.setText(mes);
+            centerPlaylistsPane.repaint();
+        }).start();
     }
 
     public static JFrame getFrame() {return frame;}
@@ -470,6 +490,12 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
     }
 
     private static void loadDays() {
+        playListsScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        toolBar.setVisible(false);
+
+        playProgress.setString("Load media...");
+        playProgress.setIndeterminate(true);
+
         for (String day : days) {
             Out.Print("\nTry to load the day '" + day + "'...");
 
@@ -554,6 +580,12 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
 
         Out.Print("Loading tracks accomplished.");
         resetDownPaneSelect();
+
+        toolBar.setVisible(true);
+
+        playProgress.setString(null);
+        playProgress.setIndeterminate(false);
+        playListsScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
     }
 
 

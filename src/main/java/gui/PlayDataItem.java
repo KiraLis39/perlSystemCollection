@@ -5,12 +5,9 @@ import fox.components.PlayPane;
 import fox.fb.FoxFontBuilder;
 import fox.out.Out;
 import javazoom.jl.decoder.JavaLayerException;
-import javazoom.jl.player.AudioDevice;
 import javazoom.jl.player.FactoryRegistry;
 import javazoom.jl.player.Player;
 import javazoom.jl.player.advanced.AdvancedPlayer;
-import javazoom.jl.player.advanced.PlaybackEvent;
-import javazoom.jl.player.advanced.PlaybackListener;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -55,7 +52,8 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
     private DefaultListModel<AlarmItem> arm = new DefaultListModel();
     private JList<AlarmItem> alarmList;
     private JFileChooser fch = new JFileChooser("./resources/audio/");
-
+    private JButton alarmsBtn;
+    private Color alarmsBack = Color.DARK_GRAY;
 
     @Override
     public void paintComponent(Graphics g) {
@@ -279,7 +277,7 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
 
                         int btnsDim = 28;
 
-                        JButton alarmsBtn = new JButton() {
+                        alarmsBtn = new JButton() {
                             BufferedImage im;
 
                             {
@@ -290,8 +288,13 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
                             @Override
                             public void paintComponent(Graphics g) {
                                 if (im != null) {
-                                    g.drawImage(im, 1, 1, 30, 30, null);
-                                    g.drawRoundRect(0,0,31,31,6,6);
+                                    g.setColor(alarmsBack);
+                                    g.fillRoundRect(0,0,32,32,6,6);
+
+                                    g.drawImage(im, 3, 3, 26, 26, null);
+
+                                    g.setColor(Color.BLACK);
+                                    g.drawRoundRect(1,1,30,30,6,6);
                                 } else {super.paintComponent(g);}
                             }
 
@@ -634,7 +637,7 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
     }
 
     public synchronized void playAlarm(Path alarmFilePath) {
-        BackVocalFrame.setPlayedLabelText("<html><b>Alarm:</b> " + alarmFilePath.toFile().getName());
+        BackVocalFrame.setPlayedLabelText("<html><b color='RED'>Alarm:</b> " + alarmFilePath.toFile().getName());
         alarmThread = new Thread(() -> {
             try {
                 URI uri = alarmFilePath.toFile().toURI();
@@ -695,7 +698,15 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
         }
     }
 
-    public void removeSelected() {
+    public void removeSelected() { // indexOfPlayed
+        if (indexOfPlayed == playpane.getSelectedIndex()) {
+            playpane.getOwner().stop();
+        } else {
+            if (indexOfPlayed > playpane.getSelectedIndex()) {
+                indexOfPlayed--;
+            }
+        }
+
         playpane.removeSelected();
     }
 
@@ -714,6 +725,7 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
 
     public void addAlarm(String time, Path track) {
         arm.addElement(new AlarmItem(time, track));
+        alarmsBack = Color.GREEN;
     }
 
     public boolean isPaused() {return isPaused;}
@@ -803,7 +815,7 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
         public AlarmsDialog(JFrame parent) {
             super(parent, "Alarms list:", true);
 
-            setMinimumSize(new Dimension(400, 600));
+            setMinimumSize(new Dimension(400, 400));
             setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
             JPanel basePane = new JPanel() {
@@ -811,11 +823,12 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
                     setBackground(Color.MAGENTA);
                     setLayout(new BorderLayout());
 
-                    JPanel centerAlarmsListPane = new JPanel(new BorderLayout()) {
-                        {
-                            setBackground(Color.DARK_GRAY);
+                    alarmList.setBackground(Color.DARK_GRAY);
+                    alarmList.setForeground(Color.WHITE);
 
-                            add(alarmList);
+                    JScrollPane centerAlarmsListPane = new JScrollPane(alarmList) {
+                        {
+                            setBorder(null);
                         }
                     };
 
@@ -855,6 +868,7 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
                                                             Integer.parseInt(alarmInitTime.split(":")[2]) < 59
                                                     ) {
                                                         arm.addElement(new AlarmItem(alarmInitTime, alarmFilePath));
+                                                        alarmsBack = Color.GREEN;
                                                     } else {
                                                         JOptionPane.showConfirmDialog(AlarmsDialog.this, "Wrong data!", "Canceled.", JOptionPane.DEFAULT_OPTION);
                                                     }
@@ -877,6 +891,9 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
                                             int req = JOptionPane.showConfirmDialog(AlarmsDialog.this, "Delete alarm on " + toDelete.getTime() + "?", "Confirm:", JOptionPane.OK_OPTION, JOptionPane.QUESTION_MESSAGE);
                                             if (req == 0) {
                                                 arm.removeElement(toDelete);
+                                                if (arm.size() == 0) {
+                                                    alarmsBack = Color.DARK_GRAY;
+                                                }
                                             }
                                         }
                                     });

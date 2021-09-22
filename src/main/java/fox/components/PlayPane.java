@@ -191,4 +191,6 @@ public class PlayPane extends JPanel implements iPlayList {
         tracks.clear();
         dlm.clear();
     }
+
+    public PlayDataItem getOwner() {return owner;}
 }
