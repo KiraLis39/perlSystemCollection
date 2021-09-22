@@ -1,4 +1,4 @@
-package fox.components;
+package fox.utils;
 
 import java.nio.file.Path;
 

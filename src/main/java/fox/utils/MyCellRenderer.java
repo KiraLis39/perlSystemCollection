@@ -1,17 +1,20 @@
-package fox.components;
+package fox.utils;
 
+import fox.components.ListRow;
 import fox.fb.FoxFontBuilder;
+import fox.utils.CustomList;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
 
 public class MyCellRenderer extends JPanel implements ListCellRenderer {
-    private JButton label;
     private static int cellHeight;
+
+    private JButton label;
     private Font trackSelectedFont = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.CONSOLAS, 14, true);
 
-//    public static int getCellHeight() { return cellHeight; }
 
     @Override
     public void paintComponent(Graphics g) {

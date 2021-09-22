@@ -1,7 +1,12 @@
 package fox.components;
 
 import fox.out.Out;
+import fox.utils.CustomList;
+import fox.utils.MyCellRenderer;
+import fox.utils.iPlayList;
 import gui.BackVocalFrame;
+import gui.PlayDataItem;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
@@ -18,6 +23,7 @@ public class PlayPane extends JPanel implements iPlayList {
     private DefaultListModel<ListRow> dlm = new DefaultListModel();
     private CustomList<ListRow> playList;
     private PlayDataItem owner;
+
 
     public PlayPane(PlayDataItem player) {
         this.owner = player;
@@ -60,18 +66,18 @@ public class PlayPane extends JPanel implements iPlayList {
 
     @Override
     public void add(Path trackPath) {
-        tracks.add(trackPath);
-        reload();
+        if (Files.exists(trackPath)) {
+            tracks.add(trackPath);
+            reload();
+        }
     }
 
     @Override
     public Path getTrack(int index) {
-        return tracks.get(index);
+        return dlm.getElementAt(index).getPath();
     }
 
-    public int getPlayedIndex() {
-        return owner.index;
-    }
+    public int getPlayedIndex() {return owner.getIndexOfPlayed();}
 
     @Override
     public boolean isEmpty() {

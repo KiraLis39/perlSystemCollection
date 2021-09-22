@@ -1,4 +1,6 @@
-package fox.components;
+package fox.utils;
+
+import fox.components.PlayPane;
 
 import javax.swing.*;
 

@@ -1,11 +1,9 @@
 package gui;
 
 import fox.components.AlarmItem;
-import fox.components.PlayDataItem;
 import fox.components.PlayPane;
 import door.MainClass;
 import fox.fb.FoxFontBuilder;
-import fox.ia.InputAction;
 import fox.out.Out;
 import registry.Codes;
 import registry.Registry;
@@ -16,15 +14,15 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.awt.event.*;
 import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -34,6 +32,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
     private static SystemTray tray;
     private static ExecutorService executor;
 
+    private static BackVocalFrame frame;
     private static JPanel basePane, centerPlaylistsPane, playDatePane, downBtnsPane;
     private static JScrollPane playDateScroll, playListsScroll;
     private static JButton bindListBtn, clearBindBtn, moveUpBtn, moveDownBtn, removeBtn, addTrackBtn;
@@ -47,12 +46,12 @@ public class BackVocalFrame extends JFrame implements WindowListener {
     private static Font headersFontSmall = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.ARIAL_NARROW, 14, true);
     private static Font btnsFont = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.ARIAL_NARROW, 14, false);
     private static Font btnsFont2 = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.ARIAL_NARROW, 14, true);
-    private static BackVocalFrame frame;
 
+    private static int daysCounter = 0;
+    private SimpleDateFormat weakday = new SimpleDateFormat("EEEE", Locale.US);
 
     public BackVocalFrame() {
         frame = this;
-
         Out.Print("Build the frame...");
 
         try {setIconImage(new ImageIcon(ImageIO.read(new File("./resources/icons/0.png"))).getImage());
@@ -80,7 +79,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                         setBackground(Color.BLACK);
                         getViewport().setForeground(Color.WHITE);
                         setOpaque(false);
-                        getVerticalScrollBar().setUnitIncrement(16);
+                        getVerticalScrollBar().setUnitIncrement(18);
                     }
                 };
 
@@ -98,9 +97,10 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                         playDateScroll = new JScrollPane(playDatePane) {
                             {
                                 setBorder(null);
-                                getViewport().setPreferredSize(new Dimension(BackVocalFrame.this.getWidth(), 160));
-//                                setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-                                getVerticalScrollBar().setUnitIncrement(8);
+//                                getViewport().setPreferredSize(new Dimension(BackVocalFrame.this.getWidth(), 160));
+                                setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+                                setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+                                getVerticalScrollBar().setUnitIncrement(16);
                             }
                         };
 
@@ -276,24 +276,28 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
         addWindowListener(this);
 
-        loadDays();
-
         Out.Print("Show the frame...");
         pack();
         setVisible(true);
+
+        loadDays();
+
         setMinimumSize(new Dimension(dayItems[0].getWidth() * 7 + 48, 700));
         setLocationRelativeTo(null);
-        playProgress.setPreferredSize(new Dimension(frame.getWidth() / 3, 30));
-
         repaint();
+        playProgress.setPreferredSize(new Dimension(frame.getWidth() / 4, 25));
 
         try {
-            Out.Print("Starting the Executor...");
+            Out.Print("Starting the Executors...");
+
             executor = Executors.newFixedThreadPool(2);
             executor.execute(() -> {
+                String today = weakday.format(new Date());
+
                 while (true) {
                     try {
-                        for (PlayDataItem weakdayItem : getWeakdayItems()) {
+                        for (PlayDataItem weakdayItem : getWeekdayItems()) {
+                            if (!weakdayItem.getName().equalsIgnoreCase(today)) {continue;}
 
                             if (!weakdayItem.inSchedulingTimeAccept()) {
                                 if (weakdayItem.isPlayed()) {
@@ -304,7 +308,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                                 if (weakdayItem.getPlayPane().isEmpty()) {continue;}
 
                                 if (!weakdayItem.isPlayed() && !weakdayItem.isPaused() && !weakdayItem.isHandStopped()) {
-                                    weakdayItem.play();
+                                    weakdayItem.play(0);
                                 }
                             }
 
@@ -322,9 +326,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
             executor.execute(() -> {
                 while (true) {
                     try {
-
-                        for (PlayDataItem weakdayItem : getWeakdayItems()) {
-
+                        for (PlayDataItem weakdayItem : getWeekdayItems()) {
                             String time;
                             ArrayList<AlarmItem> ail = weakdayItem.getAlarmData();
                             for (AlarmItem s : ail) {
@@ -350,28 +352,25 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
                     try {Thread.sleep(1000);
                     } catch (InterruptedException e) {
+                        Out.Print("Play control executor was interrupted.");
                         Thread.currentThread().interrupt();
                     }
                 }
             });
-//            executor.shutdown(); //shutdown executor
+            executor.shutdown(); //shutdown executor
 //            while (!executor.awaitTermination(1, TimeUnit.SECONDS)) {
 //                System.out.println("AWAIT");
 //            }
         } catch (Exception e) {
             Out.Print("Executor loading exception: " + e.getMessage());
         }
-
     }
 
     public static void resetDownPaneSelect() {
-        Component[] comps = playDatePane.getComponents();
-        for (Component comp : comps) {
-            if (comp instanceof PlayDataItem) {
-                ((PlayDataItem) comp).setSelected(false);
-            }
+        Out.Print("Reset frame panels selections...");
+        for (PlayDataItem comp : getWeekdayItems()) {
+            comp.setSelected(false);
         }
-
     }
 
     public static void showPlayList(PlayPane playpane) {
@@ -385,15 +384,15 @@ public class BackVocalFrame extends JFrame implements WindowListener {
             }}, BorderLayout.NORTH);
             centerPlaylistsPane.add(playpane, BorderLayout.CENTER);
 
-            System.out.println("Added playlist named " + playpane.getName());
+            Out.Print("The playlist named '" + playpane.getName() + "' was added to CENTER.");
         }
 
         playListsScroll.repaint();
         playListsScroll.revalidate();
     }
 
-    public static ArrayList<PlayDataItem> getWeakdayItems() {
-        ArrayList<PlayDataItem> result = new ArrayList<>();
+    public static ArrayList<PlayDataItem> getWeekdayItems() {
+        ArrayList<PlayDataItem> result = new ArrayList<>(7);
 
         for (Component comp : playDatePane.getComponents()) {
             if (comp instanceof PlayDataItem) {
@@ -405,46 +404,39 @@ public class BackVocalFrame extends JFrame implements WindowListener {
     }
 
     public static void updatePlayedLabelText() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {Thread.sleep(250);
-                } catch (InterruptedException e) {/* IGNORE */}
-                List<PlayDataItem> played = getSoundedItems();
-                String mes = "<html>Playing: ";
-                for (PlayDataItem playItem : played) {
-                    mes += "<b color='YELLOW'>" + playItem.getName() + ":</b> '" + playItem.getActiveTrackName() + "' ";
-                }
+        new Thread(() -> {
+            try {Thread.sleep(250);
+            } catch (InterruptedException e) {/* IGNORE */}
 
-                nowPlayedLabel.setText(mes);
+            List<PlayDataItem> played = getSoundedItems();
+            String mes = "<html>Playing: ";
+            for (PlayDataItem playItem : played) {
+                mes += "<b color='YELLOW'>" + playItem.getName() + ":</b> '" + playItem.getActiveTrackName() + "' ";
             }
+
+            nowPlayedLabel.setText(mes);
+
+            setProgress(100 / getSelectedItem().getPlayPane().getRowsCount() * (getSelectedItem().getIndexOfPlayed() + 1));
         }).start();
     }
 
     public static JFrame getFrame() {return frame;}
 
     public static PlayDataItem getSelectedItem() {
-        Component[] comps = playDatePane.getComponents();
-        for (Component comp : comps) {
-            if (comp instanceof PlayDataItem) {
-                if (((PlayDataItem) comp).isSelected()) {
-                    return ((PlayDataItem) comp);
-                }
+        for (PlayDataItem comp : getWeekdayItems()) {
+            if (comp.isSelected()) {
+                return comp;
             }
         }
-
         return null;
     }
 
     private static List<PlayDataItem> getSoundedItems() {
         List<PlayDataItem> result = new ArrayList<>();
 
-        Component[] comps = playDatePane.getComponents();
-        for (Component comp : comps) {
-            if (comp instanceof PlayDataItem) {
-                if (((PlayDataItem) comp).isPlayed()) {
-                    result.add((PlayDataItem) comp);
-                }
+        for (PlayDataItem comp : getWeekdayItems()) {
+            if (comp.isPlayed()) {
+                result.add(comp);
             }
         }
 
@@ -466,127 +458,101 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 //        }
     }
 
-    private static int counter = 0;
     private static void loadDays() {
-        Out.Print("Loading the tracks...");
-
         for (String day : days) {
             Out.Print("\nTry to load the day '" + day + "'...");
 
             try {
-                String meta;
-                String[] data;
+                // META loading:
+                String meta = Files.readString(Paths.get("./resources/scheduler/" + day + ".meta"), StandardCharsets.UTF_8);
+                String[] data = meta.split("NN_");
 
-                try {
-                    // META loading:
-                    meta = Files.readString(Paths.get("./resources/scheduler/" + day + ".meta"), StandardCharsets.UTF_8);
-                    data = meta.split("NN_");
+                dayItems[daysCounter] = new PlayDataItem(
+                        day,
+                        data[1].split("_EE")[1],
+                        data[2].split("_EE")[1],
+                        Boolean.parseBoolean(data[3].split("_EE")[1]));
 
-                    dayItems[counter] = new PlayDataItem(
-                            day,
-                            data[1].split("_EE")[1],
-                            data[2].split("_EE")[1],
-                            Boolean.parseBoolean(data[3].split("_EE")[1]));
 
-                    // ALARMS loading:
-                    List<String> alarms = Files.lines(Paths.get("./resources/scheduler/" + day + ".alarms"), StandardCharsets.UTF_8).collect(Collectors.toList());
-                    for (String alarm : alarms) {
-                        try {
-                            String time = alarm.split(">")[0];
-                            Path track = Paths.get(alarm.split(">")[1]);
+                // ALARMS loading:
+                List<String> alarms = Files.lines(Paths.get("./resources/scheduler/" + day + ".alarms"), StandardCharsets.UTF_8).collect(Collectors.toList());
+                for (String alarm : alarms) {
+                    try {
+                        String time = alarm.split(">")[0];
+                        Path track = Paths.get(alarm.split(">")[1]);
 
-                            if (Files.notExists(track)) {
-                                Out.Print("Alarm file not exist:", Out.LEVEL.WARN);
+                        if (Files.notExists(track)) {
+                            Out.Print("Alarm file not exist:", Out.LEVEL.WARN);
+                        } else {
+                            if (time.length() == 8) {
+                                dayItems[daysCounter].addAlarm(time, track);
                             } else {
-                                if (time.length() == 8) {
-                                    dayItems[counter].addAlarm(time, track);
-                                } else {
-                                    Out.Print("Time is not correct: " + time, Out.LEVEL.WARN);
-                                }
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    // LIST loading:
-                    List<String> tracks = Files.lines(Paths.get("./resources/scheduler/" + day + ".list"), StandardCharsets.UTF_8).collect(Collectors.toList());
-                    for (String track : tracks) {
-                        try {
-                            dayItems[counter].addTrack(Paths.get(track));
-                        } catch (Exception e) {
-                            if (Files.notExists(Paths.get(track))) {
-                                Out.Print("Track not exist:", Out.LEVEL.WARN, e.getStackTrace());
-                            } else {
-                                Out.Print("Unknown err:", Out.LEVEL.ERROR, e.getStackTrace());
+                                Out.Print("Time is not correct: " + time, Out.LEVEL.WARN);
                             }
                         }
+                    } catch (Exception e) {
+                        Out.Print("Alarms loading exception: " + e.getMessage());
+                        e.printStackTrace();
                     }
-
-                } catch (IllegalArgumentException iae) {
-                    Out.Print("Err:", Out.LEVEL.WARN, iae.getStackTrace());
-                    iae.printStackTrace();
-                } catch (ArrayIndexOutOfBoundsException aibe) {
-                    Out.Print("Err:", Out.LEVEL.WARN, aibe.getStackTrace());
-                    aibe.printStackTrace();
-                } catch (MalformedInputException mie) {
-                    Out.Print("Err:", Out.LEVEL.WARN, mie.getStackTrace());
-                    mie.printStackTrace();
-                } catch (NoSuchFileException fnf) {
-                    Out.Print("PlayList for " + day + " is not exist.", Out.LEVEL.WARN);
-                    dayItems[counter] =
-                            new PlayDataItem(
-                                    day,
-                                    "00:00:00", "23:59:59",
-                                    true);
-                } catch (Exception e) {
-                    Out.Print("Meta loading err:", Out.LEVEL.WARN, e.getStackTrace());
-                    e.printStackTrace();
                 }
 
-                try {playDatePane.add(dayItems[counter]);
-                } catch (Exception e) {
-                    Out.Print("Add err:", Out.LEVEL.ERROR, e.getStackTrace());
-                    e.printStackTrace();
+
+                // LIST loading:
+                List<String> tracks = Files.lines(Paths.get("./resources/scheduler/" + day + ".list"), StandardCharsets.UTF_8).collect(Collectors.toList());
+                for (String track : tracks) {
+                    try {
+                        dayItems[daysCounter].addTrack(Paths.get(track));
+                    } catch (Exception e) {
+                        if (Files.notExists(Paths.get(track))) {
+                            Out.Print("Track not exist:", Out.LEVEL.WARN, e.getStackTrace());
+                        } else {
+                            Out.Print("Unknown err:", Out.LEVEL.ERROR, e.getStackTrace());
+                        }
+                    }
                 }
 
+            } catch (IllegalArgumentException iae) {
+                Out.Print("Err:", Out.LEVEL.WARN, iae.getStackTrace());
+                iae.printStackTrace();
+            } catch (ArrayIndexOutOfBoundsException aibe) {
+                Out.Print("Err:", Out.LEVEL.WARN, aibe.getStackTrace());
+                aibe.printStackTrace();
+            } catch (MalformedInputException mie) {
+                Out.Print("Err:", Out.LEVEL.WARN, mie.getStackTrace());
+                mie.printStackTrace();
+            } catch (NoSuchFileException fnf) {
+                Out.Print("PlayList for " + day + " is not exist.", Out.LEVEL.WARN);
+                dayItems[daysCounter] =
+                        new PlayDataItem(
+                                day,
+                                "12:00:00", "12:00:00",
+                                true);
             } catch (Exception e) {
+                Out.Print("Meta loading err:", Out.LEVEL.WARN, e.getStackTrace());
                 e.printStackTrace();
-                Out.Print("Loading global err:", Out.LEVEL.ERROR, e.getStackTrace());
             }
 
-//            Out.Print("Counter increase on 1 now.");
-            counter++;
+            try {playDatePane.add(dayItems[daysCounter]);
+            } catch (Exception e) {
+                Out.Print("Is playDatePane`s add err: " + e.getMessage(), Out.LEVEL.ERROR, e.getStackTrace());
+                e.printStackTrace();
+            }
+
+            daysCounter++;
         }
 
         Out.Print("Loading tracks accomplished.");
-//        dayItems[0].setSelected(true);
-
-        try {
-            resetDownPaneSelect();
-//            for (PlayDataItem dayItem : dayItems) {
-//                dayItem.checkScheduleLaunch();
-//            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private static void saveTracksDB() {
-        ArrayList<PlayDataItem> wdItems = getWeakdayItems();
-        for (PlayDataItem wdItem : wdItems) {
-            wdItem.saveToFile();
-        }
+        resetDownPaneSelect();
     }
 
 
-    public static void setProgress(int prog) {
+    private static void setProgress(int prog) {
         if (prog < 0) {prog = 0;} else if (prog > 100) {prog = 100;}
         playProgress.setValue(prog);
     }
 
     private void tray() throws AWTException {
-        Out.Print("Traying the frame...");
+        Out.Print("Tray the frame...");
 
         frame.dispose();
         tray.add(trayIcon);
@@ -594,62 +560,69 @@ public class BackVocalFrame extends JFrame implements WindowListener {
     }
 
     private void detray() {
-        Out.Print("De-Traying the frame...");
+        Out.Print("De-Tray the frame...");
         BackVocalFrame.this.setVisible(true);
         BackVocalFrame.this.setState(JFrame.NORMAL);
         tray.remove(trayIcon);
+    }
+
+    private void exit() {
+        executor.shutdownNow();
+
+        // saving days:
+        for (PlayDataItem wdItem : getWeekdayItems()) {
+            wdItem.saveToFile();
+        }
+
+        BackVocalFrame.this.dispose();
+        MainClass.exit(Codes.OLL_OK);
     }
 
 
     // Listeners:
     @Override
     public void windowOpened(WindowEvent e) {
-    	Out.Print("Opening the frame...");
+    	Out.Print("The frame is open now.");
     }
 
     @Override
     public void windowClosing(WindowEvent e) {
-        int req = JOptionPane.showConfirmDialog(BackVocalFrame.this, "Are You sure?..", "Exit?", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null);
+        int req = JOptionPane.showConfirmDialog(BackVocalFrame.this,
+                "Are You sure?..", "Save and exit?",
+                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null);
         if (req == 0) {
-            executor.shutdownNow();
-            saveTracksDB();
-            BackVocalFrame.this.dispose();
-            MainClass.exit(Codes.OLL_OK);
+            exit();
         }
     }
 
     @Override
     public void windowClosed(WindowEvent e) {
-        Out.Print("Closing the frame...");
+        Out.Print("Frame is closed now.");
     }
 
     @Override
     public void windowIconified(WindowEvent e) {
         if (SystemTray.isSupported()) {
             tray = SystemTray.getSystemTray();
-            Image image = Toolkit.getDefaultToolkit().getImage("./resources/icons/0.png");
 
-            PopupMenu popup = new PopupMenu();
-            MenuItem defaultItem = new MenuItem("Test");
-            defaultItem.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    detray();
+            PopupMenu popup = new PopupMenu() {
+                {
+                    MenuItem defaultItem = new MenuItem("Show the frame");
+                    defaultItem.addActionListener(e13 -> detray());
+
+                    MenuItem close = new MenuItem("Exit");
+                    close.addActionListener(e12 -> exit());
+
+                    add(defaultItem);
+                    add(close);
                 }
-            });
-            popup.add(defaultItem);
+            };
 
-            MenuItem close = new MenuItem("Close");
-            close.addActionListener(e12 -> MainClass.exit(Codes.OLL_OK));
-            popup.add(close);
 
-            trayIcon = new TrayIcon(image, "BVF", popup);
-            trayIcon.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    detray();
-                }
-            });
+
+
+            trayIcon = new TrayIcon(Toolkit.getDefaultToolkit().getImage("./resources/icons/0.png"), "BVF", popup);
+            trayIcon.addActionListener(e1 -> detray());
             trayIcon.setImageAutoSize(true);
             trayIcon.setToolTip("BackVocalStudio");
 

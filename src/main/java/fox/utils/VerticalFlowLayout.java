@@ -1,4 +1,4 @@
-package fox.components;
+package fox.utils;
 
 import java.awt.*;
 import java.io.Serializable;
