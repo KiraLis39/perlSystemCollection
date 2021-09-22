@@ -96,7 +96,7 @@ public class PlayPane extends JPanel implements iPlayList {
 
 
     @Override
-    public void moveSelectedUp() {
+    public boolean moveSelectedUp() {
         int index = getSelectedIndex();
         if (index > 0) {
             ListRow tmp = dlm.getElementAt(index);
@@ -107,11 +107,13 @@ public class PlayPane extends JPanel implements iPlayList {
             dlm.removeElementAt(index);
             dlm.insertElementAt(tmp,index - 1);
             playList.setSelectedIndex(index - 1);
+            return true;
         }
+        return false;
     }
 
     @Override
-    public void moveSelectedDown() {
+    public boolean moveSelectedDown() {
         int index = getSelectedIndex();
         if (index < dlm.size() - 1) {
             ListRow tmp = dlm.getElementAt(index);
@@ -122,7 +124,9 @@ public class PlayPane extends JPanel implements iPlayList {
             dlm.removeElementAt(index);
             dlm.insertElementAt(tmp,index + 1);
             playList.setSelectedIndex(index + 1);
+            return true;
         }
+        return false;
     }
 
     @Override

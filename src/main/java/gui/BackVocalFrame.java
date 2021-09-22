@@ -27,13 +27,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-public class BackVocalFrame extends JFrame implements WindowListener {
+public class BackVocalFrame extends JFrame implements WindowListener, ComponentListener {
     private static TrayIcon trayIcon;
     private static SystemTray tray;
     private static ExecutorService executor;
 
     private static BackVocalFrame frame;
-    private static JPanel basePane, centerPlaylistsPane, playDatePane, downBtnsPane;
+    private static JPanel basePane, centerPlaylistsPane, playDatePane, downBtnsPane, downShedulePane;
     private static JScrollPane playDateScroll, playListsScroll;
     private static JButton bindListBtn, clearBindBtn, moveUpBtn, moveDownBtn, removeBtn, addTrackBtn;
     private static JLabel nowPlayedLabel;
@@ -49,6 +49,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
     private static int daysCounter = 0;
     private SimpleDateFormat weakday = new SimpleDateFormat("EEEE", Locale.US);
+
 
     public BackVocalFrame() {
         frame = this;
@@ -83,12 +84,13 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                     }
                 };
 
-                JPanel downShedulePane = new JPanel(new BorderLayout(0, 0)) {
+                downShedulePane = new JPanel(new BorderLayout(0, 0)) {
                     {
                         setBackground(Color.gray);
+//                        setBorder(new EmptyBorder(0,1,0,1));
 //                        setPreferredSize(new Dimension(400, 0));
 
-                        playDatePane = new JPanel(new GridLayout(1, 0, 3,0)) {
+                        playDatePane = new JPanel(new GridLayout(1, 7, 1,0)) {
                             {
                                 setBackground(Color.BLACK);
                             }
@@ -229,7 +231,9 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                                         addActionListener(new ActionListener() {
                                             @Override
                                             public void actionPerformed(ActionEvent e) {
-                                                int req = JOptionPane.showConfirmDialog(null, "Delete the track?", "Sure?", JOptionPane.WARNING_MESSAGE);
+                                                int req = JOptionPane.showConfirmDialog(null,
+                                                        "Delete track #" + (getSelectedItem().getPlayPane().getSelectedIndex() + 1) + "?",
+                                                        "Sure?", JOptionPane.WARNING_MESSAGE);
 
                                                 if (req == 0) {
                                                     getSelectedItem().removeSelected();
@@ -275,6 +279,7 @@ public class BackVocalFrame extends JFrame implements WindowListener {
         add(basePane);
 
         addWindowListener(this);
+        addComponentListener(this);
 
         Out.Print("Show the frame...");
         pack();
@@ -308,7 +313,8 @@ public class BackVocalFrame extends JFrame implements WindowListener {
                                 if (weakdayItem.getPlayPane().isEmpty()) {continue;}
 
                                 if (!weakdayItem.isPlayed() && !weakdayItem.isPaused() && !weakdayItem.isHandStopped()) {
-                                    weakdayItem.play(0);
+                                    weakdayItem.play();
+                                    weakdayItem.setSelected(true);
                                 }
                             }
 
@@ -415,9 +421,14 @@ public class BackVocalFrame extends JFrame implements WindowListener {
             }
 
             nowPlayedLabel.setText(mes);
-
             setProgress(100 / getSelectedItem().getPlayPane().getRowsCount() * (getSelectedItem().getIndexOfPlayed() + 1));
+            centerPlaylistsPane.repaint();
         }).start();
+    }
+
+    public static void setPlayedLabelText(String mes) {
+        nowPlayedLabel.setText(mes);
+        centerPlaylistsPane.repaint();
     }
 
     public static JFrame getFrame() {return frame;}
@@ -639,4 +650,18 @@ public class BackVocalFrame extends JFrame implements WindowListener {
 
     public void windowActivated(WindowEvent e) {}
     public void windowDeactivated(WindowEvent e) {}
+
+    @Override
+    public void componentResized(ComponentEvent e) {
+//        resizeReq = true;
+//        downShedulePane.setPreferredSize(new Dimension(0, (int) (frame.getHeight() / 3f)));
+//        downShedulePane.revalidate();
+//        downShedulePane.repaint();
+//        frame.revalidate();
+//        frame.repaint();
+    }
+
+    public void componentMoved(ComponentEvent e) {}
+    public void componentShown(ComponentEvent e) {}
+    public void componentHidden(ComponentEvent e) {}
 }

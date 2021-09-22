@@ -13,7 +13,7 @@ public class MyCellRenderer extends JPanel implements ListCellRenderer {
     private static int cellHeight;
 
     private JButton label;
-    private Font trackSelectedFont = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.CONSOLAS, 14, true);
+    private Font trackSelectedFont = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.CONSOLAS, 12, true);
 
 
     @Override
@@ -56,13 +56,14 @@ public class MyCellRenderer extends JPanel implements ListCellRenderer {
 //        label.setBorder(new EmptyBorder(0,0,0,0));
 
         if (isSelected) {
-            label.setBackground(Color.BLACK);
+            label.setBackground(Color.GRAY);
             label.setForeground(Color.WHITE);
             label.setFont(trackSelectedFont);
-        } else if (cellHasFocus) {
-            label.setBackground(Color.MAGENTA);
-            label.setForeground(Color.YELLOW);
-            label.setFont(null);
+
+            int ind = ((CustomList)list).getPlayedRowIndex();
+            if (((ListRow) value).getCount() - 1 == ind) {
+                label.setForeground(Color.CYAN);
+            }
         } else {
             label.setBackground(list.getBackground());
             label.setForeground(Color.WHITE);
