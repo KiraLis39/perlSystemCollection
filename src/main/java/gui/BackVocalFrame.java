@@ -407,7 +407,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
 
         if (playpane != null) {
             centerPlaylistsPane.add(new JLabel(playpane.getName() + "`s playlist:") {{
-                setBorder(new EmptyBorder(3, 6, 0, 0));
+                setBorder(new EmptyBorder(6, 6, 3, 0));
                 setFont(headersFontSmall);
                 setForeground(Color.WHITE);
             }}, BorderLayout.NORTH);
