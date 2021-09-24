@@ -1,10 +1,12 @@
 package gui;
 
 import fox.components.AlarmItem;
+import fox.components.ListRow;
 import fox.components.PlayPane;
 import door.MainClass;
 import fox.fb.FoxFontBuilder;
 import fox.out.Out;
+import fox.utils.VerticalFlowLayout;
 import registry.Codes;
 import registry.Registry;
 import javax.imageio.ImageIO;
@@ -36,10 +38,10 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
     private static ExecutorService executor;
 
     private static BackVocalFrame frame;
-    private static JPanel basePane, centerPlaylistsPane, playDatePane, downBtnsPane, downShedulePane;
+    private static JPanel basePane, centerPlaylistsPane, playDatePane, downBtnsPane, downShedulePane, rightInfoPane;
     private static JScrollPane playDateScroll, playListsScroll;
-    private static JButton bindListBtn, clearBindBtn, moveUpBtn, moveDownBtn, removeBtn, addTrackBtn;
-    private static JLabel nowPlayedLabel;
+    private static JButton bindListBtn, clearBindBtn, moveUpBtn, moveDownBtn, removeBtn, addTrackBtn, showInfoBtn;
+    private static JLabel nowPlayedLabel, currentTime, selTrackName, selTrackPath, selTrackDuration, selTrackSize;
     private static JProgressBar playProgress;
     private static JFileChooser fch = new JFileChooser("./resources/audio/");
     private static JToolBar toolBar;
@@ -50,13 +52,19 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
     private static Font headersFontSmall = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.ARIAL_NARROW, 14, true);
     private static Font btnsFont = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.ARIAL_NARROW, 14, false);
     private static Font btnsFont2 = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.ARIAL_NARROW, 14, true);
+    private static Font infoFont0 = FoxFontBuilder.setFoxFont(FoxFontBuilder.FONT.CANDARA, 14, true);
 
     private static int daysCounter = 0;
     private SimpleDateFormat weakday = new SimpleDateFormat("EEEE", Locale.US);
+    private SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+
+    private static boolean isInfoShowed;
 
 
     public BackVocalFrame() {
         frame = this;
+        sdf.setTimeZone(TimeZone.getDefault());
+
         Out.Print("Build the frame...");
 
         try {setIconImage(new ImageIcon(ImageIO.read(new File("./resources/icons/0.png"))).getImage());
@@ -86,6 +94,28 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
                         setOpaque(false);
                         getVerticalScrollBar().setUnitIncrement(18);
                         setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+                    }
+                };
+
+                rightInfoPane = new JPanel(new GridLayout(21, 1,0,0)) {
+                    {
+                        setBackground(Color.BLACK);
+                        setBorder(new EmptyBorder(3,3,0,0));
+
+                        add(new JLabel("<Track info>") {{setForeground(Color.WHITE); setFont(infoFont0); setHorizontalAlignment(JLabel.CENTER);}});
+                        currentTime = new JLabel(sdf.format(System.currentTimeMillis())) {{setForeground(Color.WHITE); setFont(infoFont0); setHorizontalAlignment(JLabel.LEFT);}};
+                        add(currentTime);
+                        add(new JSeparator());
+
+                        selTrackName = new JLabel() {{setForeground(Color.WHITE); setFont(infoFont0); setHorizontalAlignment(JLabel.LEFT);}};
+                        selTrackPath = new JLabel() {{setForeground(Color.WHITE); setFont(infoFont0); setHorizontalAlignment(JLabel.LEFT);}};
+                        selTrackDuration = new JLabel() {{setForeground(Color.WHITE); setFont(infoFont0); setHorizontalAlignment(JLabel.LEFT);}};
+                        selTrackSize = new JLabel() {{setForeground(Color.WHITE); setFont(infoFont0); setHorizontalAlignment(JLabel.LEFT);}};
+
+                        add(selTrackName);
+                        add(selTrackPath);
+                        add(selTrackDuration);
+                        add(selTrackSize);
                     }
                 };
 
@@ -167,12 +197,29 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
                                     }
                                 };
 
+                                showInfoBtn = new JButton("Information") {
+                                    {
+                                        setForeground(Color.GRAY);
+                                        setFont(btnsFont2);
+                                        addActionListener(new ActionListener() {
+                                            @Override
+                                            public void actionPerformed(ActionEvent e) {
+                                                isInfoShowed = !isInfoShowed;
+                                                rightInfoPane.setVisible(isInfoShowed);
+                                            }
+                                        });
+                                    }
+                                };
+
                                 add(moveUpBtn);
                                 add(new JSeparator());
                                 add(addTrackBtn);
                                 add(removeBtn);
                                 add(new JSeparator());
                                 add(moveDownBtn);
+                                add(new JSeparator());
+                                add(new JSeparator());
+                                add(showInfoBtn);
                             }
                         };
 
@@ -290,6 +337,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
                 };
 
                 add(playListsScroll, BorderLayout.CENTER);
+                add(rightInfoPane, BorderLayout.EAST);
                 add(downShedulePane, BorderLayout.SOUTH);
             }
         };
@@ -309,7 +357,6 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
         setMinimumSize(new Dimension(dayItems[0].getWidth() * 7 + 48, 700));
         setLocationRelativeTo(null);
         repaint();
-        playProgress.setPreferredSize(new Dimension(frame.getWidth() / 3, 27));
 
         try {
             Out.Print("Starting the Executors...");
@@ -349,8 +396,6 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
                 }
             });
             executor.execute(() -> {
-                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss (zZ)");
-                sdf.setTimeZone(TimeZone.getTimeZone("+0"));
                 Out.Print("== Launch time is: <" + sdf.format(System.currentTimeMillis() - MainClass.getStartTime()) + "> ==");
 
                 while (true) {
@@ -379,6 +424,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
                         e.printStackTrace();
                     }
 
+                    currentTime.setText("<html>Now: <b color='YELLOW'>" + sdf.format(System.currentTimeMillis()) + "</b></html>");
                     try {Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         Out.Print("Play control executor was interrupted.");
@@ -393,6 +439,9 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
         } catch (Exception e) {
             Out.Print("Executor loading exception: " + e.getMessage());
         }
+
+        playProgress.setPreferredSize(new Dimension(frame.getWidth() / 3, 27));
+        rightInfoPane.setPreferredSize(new Dimension(350, 0));
     }
 
     public static void resetDownPaneSelect() {
@@ -483,6 +532,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
     }
 
     public static void enableControls(boolean enable) {
+        rightInfoPane.setVisible(enable && isInfoShowed);
         toolBar.setVisible(enable);
         bindListBtn.setEnabled(enable);
         clearBindBtn.setEnabled(enable);
@@ -490,6 +540,16 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
             centerPlaylistsPane.removeAll();
             centerPlaylistsPane.repaint();
         }
+    }
+
+    public static void updateInfo(ListRow row) {
+        selTrackName.setText("<html> <b color='#00FFFF'>Name:</b> " + row.getPath().toFile().getName().substring(0, row.getPath().toFile().getName().length() - 4));
+        selTrackName.setToolTipText("" + row.getPath().toFile().getName().substring(0, row.getPath().toFile().getName().length() - 4));
+        selTrackPath.setText("<html> <b color='#00FFFF'>Path:</b> " + row.getPath());
+        selTrackPath.setToolTipText("" + row.getPath());
+        try {selTrackDuration.setText("<html> <b color='#00FFFF'>Duration:</b> " + row.getDuration());
+        } catch (IOException e) {e.printStackTrace();}
+        selTrackSize.setText("<html> <b color='#00FFFF'>Size:</b> " + String.format("%.2f", row.getPath().toFile().length() / 1000f / 1000f) + " mb.");
     }
 
     private void stateChanged() {
@@ -501,6 +561,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
     private static void loadDays() {
         playListsScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
         toolBar.setVisible(false);
+        rightInfoPane.setVisible(false);
 
         playProgress.setString("Load media...");
         playProgress.setIndeterminate(true);
@@ -595,6 +656,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
         playProgress.setString(null);
         playProgress.setIndeterminate(false);
         playListsScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        rightInfoPane.setVisible(true);
     }
 
 
@@ -694,12 +756,9 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
 
     @Override
     public void componentResized(ComponentEvent e) {
-//        resizeReq = true;
-//        downShedulePane.setPreferredSize(new Dimension(0, (int) (frame.getHeight() / 3f)));
-//        downShedulePane.revalidate();
-//        downShedulePane.repaint();
-//        frame.revalidate();
-//        frame.repaint();
+        SwingUtilities.invokeLater(() -> {
+            rightInfoPane.setPreferredSize(new Dimension(frame.getWidth() / 4, 0));
+        });
     }
 
     public void componentMoved(ComponentEvent e) {}

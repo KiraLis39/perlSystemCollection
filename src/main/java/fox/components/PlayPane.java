@@ -9,6 +9,10 @@ import gui.PlayDataItem;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -56,6 +60,21 @@ public class PlayPane extends JPanel implements iPlayList {
 //              setVisibleRowCount(5);
                 setBackground(Color.DARK_GRAY);
                 setCellRenderer(new MyCellRenderer(32));
+                addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        super.mouseClicked(e);
+                        BackVocalFrame.updateInfo(playList.getSelectedValue());
+                    }
+                });
+                addKeyListener(new KeyAdapter() {
+                    @Override
+                    public void keyReleased(KeyEvent e) {
+                        if (e.getKeyCode() == KeyEvent.VK_UP || e.getKeyCode() == KeyEvent.VK_DOWN) {
+                            BackVocalFrame.updateInfo(playList.getSelectedValue());
+                        }
+                    }
+                });
             }
         };
 
