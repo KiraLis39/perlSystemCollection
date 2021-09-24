@@ -15,7 +15,9 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.*;
 import java.awt.event.*;
 import java.nio.charset.MalformedInputException;
@@ -138,6 +140,8 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
                                         addActionListener(new ActionListener() {
                                             @Override
                                             public void actionPerformed(ActionEvent e) {
+                                                if (getSelectedItem().getPlayPane().getSelectedIndex() == -1) {return;}
+
                                                 int req = JOptionPane.showConfirmDialog(null,
                                                         "Delete track #" + (getSelectedItem().getPlayPane().getSelectedIndex() + 1) + "?",
                                                         "Sure?", JOptionPane.WARNING_MESSAGE);
@@ -196,7 +200,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
                                 downBtnsPane = new JPanel(new FlowLayout(0, 3, 3)) {
                                     {
                                         setBackground(Color.DARK_GRAY);
-                                        setBorder(new EmptyBorder(0,0,3,0));
+                                        setBorder(new EmptyBorder(0,0,1,0));
 
                                         bindListBtn = new JButton("Bind to dir") {
                                             {
@@ -305,7 +309,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
         setMinimumSize(new Dimension(dayItems[0].getWidth() * 7 + 48, 700));
         setLocationRelativeTo(null);
         repaint();
-        playProgress.setPreferredSize(new Dimension(frame.getWidth() / 4, 25));
+        playProgress.setPreferredSize(new Dimension(frame.getWidth() / 3, 27));
 
         try {
             Out.Print("Starting the Executors...");
@@ -345,6 +349,10 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
                 }
             });
             executor.execute(() -> {
+                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss (zZ)");
+                sdf.setTimeZone(TimeZone.getTimeZone("+0"));
+                Out.Print("== Launch time is: <" + sdf.format(System.currentTimeMillis() - MainClass.getStartTime()) + "> ==");
+
                 while (true) {
                     try {
                         for (PlayDataItem weakdayItem : getWeekdayItems()) {
@@ -475,6 +483,7 @@ public class BackVocalFrame extends JFrame implements WindowListener, ComponentL
     }
 
     public static void enableControls(boolean enable) {
+        toolBar.setVisible(enable);
         bindListBtn.setEnabled(enable);
         clearBindBtn.setEnabled(enable);
         if (!enable) {

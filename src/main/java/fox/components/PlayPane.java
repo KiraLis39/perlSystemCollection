@@ -141,6 +141,8 @@ public class PlayPane extends JPanel implements iPlayList {
     }
 
     public int getSelectedIndex() {
+        if (playList == null) {return -1;}
+
         int si = playList.getSelectedIndex();
         if (si == -1) {
             playList.setSelectedIndex(0);

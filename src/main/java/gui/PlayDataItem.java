@@ -4,6 +4,7 @@ import fox.components.AlarmItem;
 import fox.components.PlayPane;
 import fox.fb.FoxFontBuilder;
 import fox.out.Out;
+import fox.render.FoxRender;
 import javazoom.jl.decoder.JavaLayerException;
 import javazoom.jl.player.FactoryRegistry;
 import javazoom.jl.player.Player;
@@ -53,47 +54,59 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
     private JList<AlarmItem> alarmList;
     private JFileChooser fch = new JFileChooser("./resources/audio/");
     private JButton alarmsBtn;
-    private Color alarmsBack = Color.DARK_GRAY;
+    private Color alarmsBack = Color.GRAY;
 
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
+        Graphics2D g2D = FoxRender.setMedRender((Graphics2D) g);
 
         // backbround:
         if (playpane == null || playpane.isEmpty()) {
-            g.setColor(defBkgColor);
-            g.fillRect(0, 0, getWidth(), getHeight());
+            g2D.setColor(defBkgColor);
+            g2D.fillRoundRect(0, 0, getWidth() - 3, getHeight() - 2, 12, 12);
         } else {
-            if (!isOver) {
-                if (getName().equals("Sunday") || getName().equals("Saturday")) {
-                    g.setColor(Color.CYAN.darker());
-                } else {
-                    g.setColor(Color.DARK_GRAY);
-                }
-                g.fillRect(0, 0, getWidth(), getHeight());
-                defTextColor = Color.WHITE;
-            } else {
-                g.setColor(Color.YELLOW);
-                g.fillRect(0, 0, getWidth(), getHeight());
+            if (isOver) {
+                g2D.setColor(Color.YELLOW);
+                g2D.fillRoundRect(0, 0, getWidth() - 3, getHeight() - 2, 12, 12);
                 defTextColor = Color.BLACK;
+            } else {
+                if (getName().equals("Sunday") || getName().equals("Saturday")) {
+                    g2D.setColor(Color.CYAN.darker());
+                } else {
+                    g2D.setColor(Color.DARK_GRAY);
+                }
+                g2D.fillRoundRect(0, 0, getWidth() - 3, getHeight() - 2, 12, 12);
+                defTextColor = Color.WHITE;
             }
         }
 
         if (isSelected) {
-            Graphics2D g2D = (Graphics2D) g;
             g2D.setStroke(new BasicStroke(2));
             g2D.setColor(Color.GREEN);
-            g2D.drawRoundRect(1,1,getWidth() - 2,getHeight() - 2,3,3);
+            g2D.drawRoundRect(1,1,getWidth() - 3,getHeight() - 3,9,9);
 //            g2D.dispose();
         }
 
         // oval:
+        float opacity = 0.75f;
         if (playpane == null || playpane.isEmpty()) {
-            g.setColor(Color.GRAY);
-            g.fillOval(getWidth() - 19, 3, 16, 16);
+            g2D.setColor(new Color(0.35f, 0.35f, 0.35f, opacity));
+            g2D.fillRoundRect(getWidth() - 28, 6, 20, 13, 9, 9);
         } else {
-            g.setColor(Color.ORANGE);
-            g.fillOval(getWidth() - 19, 3, 16, 16);
+            opacity = 0f;
+
+            for (int i = 0; i < 10; i++) {
+                opacity += 0.07;
+                if (opacity > 1f) {opacity = 1f;}
+                g2D.setColor(new Color(1.0f, 0.8f, 0.3f, opacity));
+                g2D.fillRoundRect(getWidth() - 33 + i, 3 + (i), (int) (30.5f - (i * 2)), 19 - (i * 2), 15, 15);
+            }
+
+            opacity = 1f;
+            g2D.setColor(new Color(1.0f, 0.8f, 0.25f, opacity));
+            g2D.fillRoundRect(getWidth() - 28, 6, 20, 13, 9, 9);
+
         }
 
         recolor();
@@ -124,10 +137,10 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
         }
         playpane = new PlayPane(this);
 
-        setBackground(Color.DARK_GRAY);
+        setOpaque(false);
         setLayout(new BorderLayout());
 
-        dayNameLabel = new JLabel(getName()) {{setFont(titleFont);}};
+        dayNameLabel = new JLabel(getName()) {{setFont(titleFont); setBorder(new EmptyBorder(3,6,0,0));}};
 
         dayControlPane = new JPanel(new BorderLayout()) {
             {
@@ -141,7 +154,6 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
                         JPanel inTimePane = new JPanel(new GridLayout(2,3, 3,0)) {
                             {
                                 setOpaque(false);
-                                setBackground(Color.ORANGE.darker());
 
                                 inLabelH = new JLabel("In-Hour:") {{setHorizontalAlignment(JLabel.CENTER);}};
                                 JSpinner hourSpinner = new JSpinner(new SpinnerNumberModel(8,0,23,1)) {
@@ -203,7 +215,6 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
                         JPanel outTimePane = new JPanel(new GridLayout(2,3, 3, 0)) {
                             {
                                 setOpaque(false);
-                                setBackground(Color.CYAN.darker());
 
                                 outLabelH = new JLabel("Out-Hour:") {{setHorizontalAlignment(JLabel.RIGHT);}};
                                 JSpinner hourSpinner = new JSpinner(new SpinnerNumberModel(8,0,23,1)) {
@@ -293,8 +304,8 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
 
                                     g.drawImage(im, 3, 3, 26, 26, null);
 
-                                    g.setColor(Color.BLACK);
-                                    g.drawRoundRect(1,1,30,30,6,6);
+                                    g.setColor(Color.DARK_GRAY);
+                                    g.drawRoundRect(1,1,29,29,3,3);
                                 } else {super.paintComponent(g);}
                             }
 
@@ -711,6 +722,8 @@ public class PlayDataItem extends JPanel implements MouseListener, ActionListene
     }
 
     public void moveSelectedDown() {
+        if (playpane.getSelectedIndex() == -1) {return;}
+
         if (indexOfPlayed == playpane.getSelectedIndex()) {
             if (playpane.moveSelectedDown()) {
                 indexOfPlayed++;

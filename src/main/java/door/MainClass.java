@@ -16,7 +16,15 @@ import java.nio.file.Paths;
 public class MainClass {
     private static Path[] importantDirs;
 
+    public static Long getStartTime() {
+        return startTime;
+    }
+
+    private static Long startTime;
+
     public static void main(String[] args) {
+        startTime = System.currentTimeMillis();
+
         try {
             checkImportantDirectoriesExists();
 
